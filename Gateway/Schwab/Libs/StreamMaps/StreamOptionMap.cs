@@ -1,0 +1,67 @@
+using System.Collections.Generic;
+
+namespace Schwab.Mappers
+{
+  public class StreamOptionMap
+  {
+    public static IDictionary<string, string> Map { get; set; } = new Dictionary<string, string>
+    {
+      {"Symbol", "0"},
+      {"Description", "1"},
+      {"Bid Price", "2"},
+      {"Ask Price", "3"},
+      {"Last Price", "4"},
+      {"High Price", "5"},
+      {"Low Price", "6"},
+      {"Close Price", "7"},
+      {"Total Volume", "8"},
+      {"Open Interest", "9"},
+      {"Volatility", "10"},
+      {"Money Intrinsic Value", "11"},
+      {"Expiration Year", "12"},
+      {"Multiplier", "13"},
+      {"Digits", "14"},
+      {"Open Price", "15"},
+      {"Bid Size", "16"},
+      {"Ask Size", "17"},
+      {"Last Size", "18"},
+      {"Net Change", "19"},
+      {"Strike Price", "20"},
+      {"Contract Type", "21"},
+      {"Underlying", "22"},
+      {"Expiration Month", "23"},
+      {"Deliverables", "24"},
+      {"Time Value", "25"},
+      {"Expiration Day", "26"},
+      {"Days to Expiration", "27"},
+      {"Delta", "28"},
+      {"Gamma", "29"},
+      {"Theta", "30"},
+      {"Vega", "31"},
+      {"Rho", "32"},
+      {"Security Status", "33"},
+      {"Theoretical Option Value", "34"},
+      {"Underlying Price", "35"},
+      {"UV Expiration Type", "36"},
+      {"Mark Price", "37"},
+      {"Quote Time in Long", "38"},
+      {"Trade Time in Long", "39"},
+      {"Exchange", "40"},
+      {"Exchange Name", "41"},
+      {"Last Trading Day", "42"},
+      {"Settlement Type", "43"},
+      {"Net Percent Change", "44"},
+      {"Mark Price Net Change", "45"},
+      {"Mark Price Percent Change", "46"},
+      {"Implied Yield", "47"},
+      {"isPennyPilot", "48"},
+      {"Option Root", "49"},
+      {"52 Week High", "50"},
+      {"52 Week Low", "51"},
+      {"Indicative Ask Price", "52"},
+      {"Indicative Bid Price", "53"},
+      {"Indicative Quote Time", "54"},
+      {"Exercise Type", "55"}
+    };
+  }
+}

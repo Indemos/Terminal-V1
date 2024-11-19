@@ -1,0 +1,49 @@
+@import url('open-iconic/font/css/open-iconic-bootstrap.min.css');
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  font: 12px 'Montserrat', Helvetica, Verdana, Arial, sans-serif;
+  height: 100%;
+  overflow: auto;
+  display: flex;
+  flex: 1;
+}
+
+.mud-layout, .mud-main-content, .mud-container, .views {
+  flex: 1;
+  height: auto;
+  display: flex;
+  overflow: auto;
+  flex-direction: column;
+}
+
+.views {
+  width: 100%;
+}
+
+.w-100 {
+  width: 100%;
+}
+
+.w-75 {
+  width: 75%;
+}
+
+.w-50 {
+  width: 50%;
+}
+
+.w-25 {
+  width: 25%;
+}
+
+.canvas-container {
+  grid-template-columns: 5.5rem 1fr 5.5rem !important;
+}
+
+.canvas-view {
+  background-color: #fff !important;
+}

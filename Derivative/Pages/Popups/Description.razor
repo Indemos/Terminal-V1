@@ -1,0 +1,30 @@
+<MudDialog>
+  <TitleContent>
+  </TitleContent>
+  <DialogContent>
+
+    @using System.ComponentModel.DataAnnotations
+
+    <MudText Class="mb-3">Variables available to be used in the expression.</MudText>
+
+    <ul>
+      <li>IntrinsicValue</li>
+      <li>OpenInterest</li>
+      <li>Volatility</li>
+      <li>Volume</li>
+      <li>BidSize</li>
+      <li>AskSize</li>
+      <li>Theta</li>
+      <li>Gamma</li>
+      <li>Delta</li>
+      <li>Vega</li>
+    </ul>
+
+    <MudText Class="mb-3">Prepend variable with "C" or "P" to get value for calls or puts only.</MudText>
+
+    <MudPaper Class="py-6 d-flex justify-end" Elevation="0">
+      <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="OnClose" Class="mr-3">Close</MudButton>
+    </MudPaper>
+
+  </DialogContent>
+</MudDialog>

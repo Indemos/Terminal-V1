@@ -1,0 +1,39 @@
+@page "/portfolio"
+
+<MudPaper Class="flex-grow-1 d-flex flex-column overflow-auto">
+  <MudDrawerContainer Class="mud-height-full d-flex">
+    <MudDrawer Fixed="true" Elevation="1" Variant="@DrawerVariant.Mini" OpenMiniOnHover="false">
+      <div class="menu-container py-3">
+        <MudIconButton Icon="@Icons.Material.Filled.MultilineChart" Variant="Variant.Filled" Color="Color.Success" Size="Size.Large" OnClick="OnCombine" class="mb-3" />
+        <MudIconButton Icon="@Icons.Material.Filled.RemoveCircle" Variant="Variant.Filled" Color="Color.Error" Size="Size.Large" OnClick="OnClear" class="mb-3" />
+        @if (IsLoading)
+        {
+          <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
+        }
+      </div>
+    </MudDrawer>
+    <div class="content-container flex-grow-1">
+      @foreach (var chain in Groups)
+      {
+        <MudExpansionPanels MultiExpansion="true" Class="flex-grow-1 ma-3">
+          @foreach (var group in chain.Value)
+          {
+            <MudExpansionPanel>
+              <TitleContent>
+                <div class="d-flex">
+                  <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
+                  <MudText>@group.Key</MudText>
+                </div>
+              </TitleContent>
+              <ChildContent>
+                <div class="panel">
+                  <CanvasView @ref="chain.Value[group.Key]"></CanvasView>
+                </div>
+              </ChildContent>
+            </MudExpansionPanel>
+          }
+        </MudExpansionPanels>
+      }
+    </div>
+  </MudDrawerContainer>
+</MudPaper>

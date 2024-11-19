@@ -1,0 +1,28 @@
+@if (Stats.Count > 0)
+{
+  <div class="statements">
+    @foreach (var group in Stats)
+    {
+      <div class="card mb-3">
+        <div class="blue-grey darken-4 text-light pa-4">
+          @group.Key
+        </div>
+        <div class="card-body ma-4">
+          @foreach (var data in group.Value)
+          {
+            <div class="card-row py-2">
+              <div class="cell-name pr-4 text-right">@data.Name</div>
+              <div class="cell-value mr-3">@ShowDouble(data.Value)</div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+}
+else
+{
+  <div class="blue-grey darken-4 text-light pa-4">
+    No deals
+  </div>
+}

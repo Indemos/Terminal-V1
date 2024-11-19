@@ -1,0 +1,26 @@
+<MudDialog>
+  <TitleContent>
+  </TitleContent>
+  <DialogContent>
+
+    @using System.ComponentModel.DataAnnotations
+
+    <EditForm EditContext="@InputContext">
+      <DataAnnotationsValidator />
+      <MudDateRangePicker Margin="Margin.Dense" Variant="Variant.Text" Label="Dates" @bind-DateRange="InputModel.Range" For="@(() => InputModel.Range.Start)" />
+      <MudTextField Label="Symbol" Variant="Variant.Text" Margin="Margin.Dense" Class="mt-3" @bind-Value="InputModel.Name" For="@(() => InputModel.Name)"></MudTextField>
+      <MudSelect Label="Group by expiration" Variant="Variant.Text" Margin="Margin.Dense" Class="mt-3" @bind-Value="InputModel.Group" For="@(() => InputModel.Group)">
+        <MudSelectItem T="string" Value="@("Yes")" />
+        <MudSelectItem T="string" Value="@("No")" />
+      </MudSelect>
+      <MudTextField Label="Price" Variant="Variant.Text" Margin="Margin.Dense" Class="mt-3" @bind-Value="InputModel.Price" For="@(() => InputModel.Price)"></MudTextField>
+      <MudTextField Label="Upside Expression" Variant="Variant.Text" Margin="Margin.Dense" Class="mt-3" @bind-Value="InputModel.ExpressionUp" For="@(() => InputModel.ExpressionUp)"></MudTextField>
+      <MudTextField Label="Downside Expression" Variant="Variant.Text" Margin="Margin.Dense" Class="mt-3" @bind-Value="InputModel.ExpressionDown" For="@(() => InputModel.ExpressionDown)"></MudTextField>
+      <MudPaper Class="py-6 d-flex justify-end" Elevation="0">
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="OnClose" Class="mr-3">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OnSuccess">Submit</MudButton>
+      </MudPaper>
+    </EditForm>
+
+  </DialogContent>
+</MudDialog>

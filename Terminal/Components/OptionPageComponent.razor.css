@@ -1,0 +1,7 @@
+.updater {
+  color: green;
+}
+
+.updater:hover {
+  opacity: 0.5;
+}

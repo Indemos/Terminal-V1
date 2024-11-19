@@ -1,0 +1,30 @@
+@using Distribution.Services
+@using Terminal.Core.Services
+@inject ISnackbar Messenger
+@inherits LayoutComponentBase
+
+<PageTitle>Terminal</PageTitle>
+
+<MudThemeProvider Theme="_theme" IsDarkMode="true" />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge">
+  @Body
+</MudContainer>
+
+@code {
+
+  public DashboardTheme _theme = new();
+
+  protected override void OnAfterRender(bool setup)
+  {
+    if (setup)
+    {
+      StateHasChanged();
+    }
+
+    InstanceService<MessageService>.Instance.OnMessage += o => Messenger.Add(o?.Error?.Message ?? o?.Message);
+  }
+}

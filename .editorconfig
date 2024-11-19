@@ -1,0 +1,17 @@
+root = true
+
+[*]
+indent_style = space
+end_of_line = crlf
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.xml]
+indent_size = 2
+
+[*.cs]
+dotnet_diagnostic.CA2227.severity = none
+dotnet_diagnostic.CA1305.severity = none
+dotnet_diagnostic.CA1062.severity = none
+dotnet_diagnostic.CS9057.severity = none

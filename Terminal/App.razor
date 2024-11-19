@@ -1,0 +1,17 @@
+<Router AppAssembly="@typeof(App).Assembly">
+  <Found Context="routeData">
+    <RouteView RouteData="@routeData" DefaultLayout="@typeof(BaseTemplate)" />
+  </Found>
+  <NotFound>
+    <PageTitle>Missing</PageTitle>
+    <LayoutView Layout="@typeof(BaseTemplate)">
+      <MudAlert Severity="Severity.Info" Elevation="1" Class="my-5 d-flex">
+        <span class="d-flex">
+          <MudLink Href="/">Home</MudLink>
+          <MudText Class="mx-2"> &raquo; </MudText>
+          <MudText Color="Color.Error">No Route</MudText>
+        </span>
+      </MudAlert>
+    </LayoutView>
+  </NotFound>
+</Router>

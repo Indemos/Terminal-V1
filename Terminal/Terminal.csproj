@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Canvas.Views.Web" Version="4.5.5" />
+    <PackageReference Include="Estimator" Version="1.0.6" />
+    <PackageReference Include="MudBlazor" Version="7.15.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Gateway\Alpaca\Libs\Alpaca.csproj" />
+    <ProjectReference Include="..\Gateway\Coinbase\Libs\Coinbase.csproj" />
+    <ProjectReference Include="..\Gateway\InteractiveBrokers\Libs\InteractiveBrokers.csproj" />
+    <ProjectReference Include="..\Gateway\Schwab\Libs\Schwab.csproj" />
+    <ProjectReference Include="..\Gateway\Simulation\Libs\Simulation.csproj" />
+  </ItemGroup>
+
+</Project>

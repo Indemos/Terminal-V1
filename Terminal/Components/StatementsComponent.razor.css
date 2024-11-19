@@ -1,0 +1,32 @@
+.card-body {
+  display: block;
+}
+
+.card-row {
+  display: flex;
+  border-bottom: 1px dashed #EEE;
+}
+
+.card-row:last-child {
+  border: 0;
+}
+
+.cell-name {
+  white-space: nowrap;
+  text-align: right;
+  width: 70%;
+}
+
+@media (min-width: 600px) {
+  .statements {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 900px) {
+  .statements {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
