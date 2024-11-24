@@ -111,9 +111,9 @@ namespace Simulation
 
       interval.Enabled = true;
       interval.AutoReset = true;
-      interval.Elapsed += (sender, e) => scheduler.Send(() =>
+      interval.Elapsed += (sender, e) => scheduler.Send(async () =>
       {
-        var point = GetState(_instruments, points);
+        var point = await GetState(_instruments, points);
 
         if (point is not null)
         {
@@ -429,7 +429,8 @@ namespace Simulation
           Account.Orders = Account
             .Orders
             .Where(o => Equals(o.Value.Descriptor, order.Descriptor) is false)
-            .ToDictionary(o => o.Key, o => o.Value);
+            .ToDictionary(o => o.Key, o => o.Value)
+            .Concurrent();
         }
       }
     }
@@ -465,7 +466,7 @@ namespace Simulation
     /// <param name="streams"></param>
     /// <param name="points"></param>
     /// <returns></returns>
-    protected virtual PointModel GetState(IDictionary<string, IEnumerator<string>> streams, IDictionary<string, PointModel> points)
+    protected virtual async Task<PointModel> GetState(IDictionary<string, IEnumerator<string>> streams, IDictionary<string, PointModel> points)
     {
       var index = string.Empty;
 
@@ -479,7 +480,7 @@ namespace Simulation
 
           if (string.IsNullOrEmpty(stream.Value.Current) is false)
           {
-            points[stream.Key] = GetStateContent(stream.Key, stream.Value.Current);
+            points[stream.Key] = await GetStateContent(stream.Key, stream.Value.Current);
           }
         }
 
@@ -508,7 +509,7 @@ namespace Simulation
     /// <param name="name"></param>
     /// <param name="source"></param>
     /// <returns></returns>
-    protected virtual PointModel GetStateContent(string name, string source)
+    protected virtual async Task<PointModel> GetStateContent(string name, string source)
     {
       var document = new FileInfo(source);
 
@@ -518,7 +519,7 @@ namespace Simulation
         using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
         using (var content = archive.Entries.First().Open())
         {
-          var optionMessage = JsonSerializer.Deserialize<PointModel>(content, _sender.Options);
+          var optionMessage = await JsonSerializer.DeserializeAsync<PointModel>(content, _sender.Options);
           optionMessage.Instrument = new InstrumentModel { Name = name };
           return optionMessage;
         }

@@ -54,8 +54,7 @@ namespace Schwab.Mappers
         case OrderTypeEnum.StopLimit:
           message.OrderType = "STOP_LIMIT";
           message.Price = order.Price;
-          message.StopPrice = order.Price;
-          message.ActivationPrice = order.ActivationPrice;
+          message.StopPrice = order.ActivationPrice;
           break;
       }
 
@@ -63,7 +62,6 @@ namespace Schwab.Mappers
         .Orders
         .Where(o => o.Instruction is InstructionEnum.Side)
         .Select(GetOrderItem)
-        .Append(GetOrderItem(order))
         .ToList();
 
       message.ChildOrderStrategies = order
@@ -77,9 +75,12 @@ namespace Schwab.Mappers
         })
         .ToList();
 
-      message.OrderLegCollection.Add(GetOrderItem(order));
+      if (order?.Transaction?.Volume is not 0)
+      {
+        message.OrderLegCollection.Add(GetOrderItem(order));
+      }
 
-      if (message.ChildOrderStrategies.Count > 0)
+      if (message.ChildOrderStrategies.Count is not 0)
       {
         message.OrderStrategyType = "TRIGGER";
       }
@@ -117,7 +118,7 @@ namespace Schwab.Mappers
         switch (order.Side)
         {
           case OrderSideEnum.Buy: response.Instruction = "BUY_TO_OPEN"; break;
-          case OrderSideEnum.Sell: response.Instruction = "SELL_TO_CLOSE"; break;
+          case OrderSideEnum.Sell: response.Instruction = "SELL_TO_OPEN"; break;
         }
       }
 

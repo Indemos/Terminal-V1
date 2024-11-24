@@ -76,7 +76,7 @@ namespace Terminal.Pages.Shares
       var account = new Account
       {
         Balance = 25000,
-        Instruments = new Dictionary<string, InstrumentModel>
+        Instruments = new ConcurrentDictionary<string, InstrumentModel>
         {
           [Instrument.Name] = Instrument
         }

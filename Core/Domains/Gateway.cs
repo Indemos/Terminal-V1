@@ -15,12 +15,12 @@ namespace Terminal.Core.Domains
     IAccount Account { get; set; }
 
     /// <summary>
-    /// Tape
+    /// Point stream
     /// </summary>
     Action<MessageModel<PointModel>> PointStream { get; set; }
 
     /// <summary>
-    /// Tape
+    /// Order stream
     /// </summary>
     Action<MessageModel<OrderModel>> OrderStream { get; set; }
 
@@ -119,12 +119,12 @@ namespace Terminal.Core.Domains
     public virtual IAccount Account { get; set; }
 
     /// <summary>
-    /// Tape
+    /// Point stream
     /// </summary>
     public virtual Action<MessageModel<PointModel>> PointStream { get; set; }
 
     /// <summary>
-    /// Tape
+    /// Order stream
     /// </summary>
     public virtual Action<MessageModel<OrderModel>> OrderStream { get; set; }
 
@@ -143,17 +143,17 @@ namespace Terminal.Core.Domains
     public abstract Task<ResponseModel<StatusEnum>> Connect();
 
     /// <summary>
+    /// Disconnect
+    /// </summary>
+    /// <returns></returns>
+    public abstract Task<ResponseModel<StatusEnum>> Disconnect();
+
+    /// <summary>
     /// Subscribe
     /// </summary>
     /// <param name="instrument"></param>
     /// <returns></returns>
     public abstract Task<ResponseModel<StatusEnum>> Subscribe(InstrumentModel instrument);
-
-    /// <summary>
-    /// Disconnect
-    /// </summary>
-    /// <returns></returns>
-    public abstract Task<ResponseModel<StatusEnum>> Disconnect();
 
     /// <summary>
     /// Unsubscribe

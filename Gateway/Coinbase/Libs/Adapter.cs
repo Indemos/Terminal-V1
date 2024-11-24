@@ -18,6 +18,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 
 namespace Coinbase
@@ -295,7 +296,8 @@ namespace Coinbase
           var positions = (await GetPositions(null, criteria))
             .Data
             .GroupBy(o => o.Name)
-            .ToDictionary(o => o.Key, o => o.FirstOrDefault());
+            .ToDictionary(o => o.Key, o => o.FirstOrDefault())
+            .Concurrent();
 
           Account.Positions = positions;
         }
@@ -304,7 +306,8 @@ namespace Coinbase
         Account.Orders = orders
           .Data
           .GroupBy(o => o.Name)
-          .ToDictionary(o => o.Key, o => o.FirstOrDefault());
+          .ToDictionary(o => o.Key, o => o.FirstOrDefault())
+          .Concurrent();
 
         Account
           .Orders
@@ -381,9 +384,10 @@ namespace Coinbase
             .SpotPositions
             .Select(InternalMap.GetPosition)
             .GroupBy(o => o.Name)
-            .ToDictionary(o => o.Key, o => o.FirstOrDefault());
+            .ToDictionary(o => o.Key, o => o.FirstOrDefault())
+            .Concurrent();
 
-          Account.Positions = new Dictionary<string, OrderModel>();
+          Account.Positions = activePositions;
         }
 
       }

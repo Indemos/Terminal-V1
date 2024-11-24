@@ -386,8 +386,8 @@ namespace Schwab
         var positions = await GetPositions(null, criteria);
 
         Account.Balance = account.Data.AggregatedBalance.CurrentLiquidationValue;
-        Account.Orders = orders.Data.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault());
-        Account.Positions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault());
+        Account.Orders = orders.Data.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
+        Account.Positions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
 
         orders
           .Data
@@ -627,7 +627,7 @@ namespace Schwab
         case true when Equals(message.Method, HttpMethod.Put):
         case true when Equals(message.Method, HttpMethod.Post):
         case true when Equals(message.Method, HttpMethod.Patch):
-          message.Content = new StringContent(JsonSerializer.Serialize(content, _sender.Options));
+          message.Content = new StringContent(JsonSerializer.Serialize(content, _sender.Options), Encoding.UTF8, "application/json");
           break;
       }
 

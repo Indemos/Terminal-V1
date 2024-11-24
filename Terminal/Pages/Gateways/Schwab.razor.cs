@@ -23,9 +23,9 @@ namespace Terminal.Pages.Gateways
     protected virtual PerformanceIndicator Performance { get; set; }
     protected virtual InstrumentModel Instrument { get; set; } = new InstrumentModel
     {
-      Name = "/ESZ24",
-      Exchange = "CME",
-      Type = InstrumentEnum.Futures,
+      Name = "SPY",
+      Exchange = "SMART",
+      Type = InstrumentEnum.Shares,
       TimeFrame = TimeSpan.FromMinutes(1)
     };
 
@@ -97,16 +97,16 @@ namespace Terminal.Pages.Gateways
       var instrument = account.Instruments[Instrument.Name];
       var performance = Performance.Calculate([account]);
 
-      if (account.Orders.Count < 1 && account.Positions.Count < 1)
+      //if (account.Orders.Count < 1 && account.Positions.Count < 1)
       {
         await OpenPositions(Instrument, 1);
       }
 
-      if (Counter is 0 && account.Positions.Count > 0)
-      {
-        await ClosePositions();
-        await OpenPositions(Instrument, account.Positions.First().Value.Side is OrderSideEnum.Buy ? -1 : 1);
-      }
+      //if (Counter is 0 && account.Positions.Count > 0)
+      //{
+      //  await ClosePositions();
+      //  await OpenPositions(Instrument, account.Positions.First().Value.Side is OrderSideEnum.Buy ? -1 : 1);
+      //}
 
       View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", View.ChartsView.GetShape<CandleShape>(point));
       View.ReportsView.UpdateItems(point.Time.Value.Ticks, "Performance", "Balance", new AreaShape { Y = account.Balance });

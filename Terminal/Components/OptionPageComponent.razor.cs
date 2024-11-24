@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using MudBlazor;
 using SkiaSharp;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -96,7 +97,7 @@ namespace Terminal.Components
       var account = new Account
       {
         Balance = 25000,
-        Instruments = new Dictionary<string, InstrumentModel>
+        Instruments = new ConcurrentDictionary<string, InstrumentModel>
         {
           [Instrument.Name] = Instrument
         }

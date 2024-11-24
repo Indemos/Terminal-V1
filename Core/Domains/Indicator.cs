@@ -44,10 +44,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Constructor
     /// </summary>
-    public Indicator()
-    {
-      Point = new();
-    }
+    public Indicator() => Point = new();
 
     /// <summary>
     /// Calculate indicator values

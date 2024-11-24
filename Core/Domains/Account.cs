@@ -1,10 +1,5 @@
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Collections.Specialized;
-using System.Linq;
-using Terminal.Core.Enums;
 using Terminal.Core.Models;
 
 namespace Terminal.Core.Domains
@@ -37,17 +32,17 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Active orders
     /// </summary>
-    IDictionary<string, OrderModel> Orders { get; set; }
+    ConcurrentDictionary<string, OrderModel> Orders { get; set; }
 
     /// <summary>
     /// Active positions
     /// </summary>
-    IDictionary<string, OrderModel> Positions { get; set; }
+    ConcurrentDictionary<string, OrderModel> Positions { get; set; }
 
     /// <summary>
     /// List of instruments
     /// </summary>
-    IDictionary<string, InstrumentModel> Instruments { get; set; }
+    ConcurrentDictionary<string, InstrumentModel> Instruments { get; set; }
   }
 
   /// <summary>
@@ -78,17 +73,17 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Active orders
     /// </summary>
-    public virtual IDictionary<string, OrderModel> Orders { get; set; }
+    public virtual ConcurrentDictionary<string, OrderModel> Orders { get; set; }
 
     /// <summary>
     /// Active positions
     /// </summary>
-    public virtual IDictionary<string, OrderModel> Positions { get; set; }
+    public virtual ConcurrentDictionary<string, OrderModel> Positions { get; set; }
 
     /// <summary>
     /// List of instruments
     /// </summary>
-    public virtual IDictionary<string, InstrumentModel> Instruments { get; set; }
+    public virtual ConcurrentDictionary<string, InstrumentModel> Instruments { get; set; }
 
     /// <summary>
     /// Constructor
