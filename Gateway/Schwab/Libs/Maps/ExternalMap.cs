@@ -134,8 +134,8 @@ namespace Schwab.Mappers
     {
       switch (message)
       {
-        case InstrumentEnum.Shares: return "Equity";
-        case InstrumentEnum.Options: return "Option";
+        case InstrumentEnum.Shares: return "EQUITY";
+        case InstrumentEnum.Options: return "OPTION";
       }
 
       return null;

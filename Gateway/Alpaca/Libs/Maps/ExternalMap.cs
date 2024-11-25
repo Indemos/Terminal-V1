@@ -1,5 +1,7 @@
 using Alpaca.Markets;
+using System.Drawing;
 using System.Linq;
+using System.Xml.Linq;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
 
@@ -12,74 +14,28 @@ namespace Alpaca.Mappers
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public static OrderBase GetOrder(OrderModel order)
+    public static NewOrderRequest GetOrder(OrderModel order)
     {
       var instrument = order.Transaction.Instrument;
       var name = instrument.Name;
       var volume = OrderQuantity.Fractional((decimal)order.Transaction.Volume);
       var side = order.Side is OrderSideEnum.Buy ? OrderSide.Buy : OrderSide.Sell;
-
-      SimpleOrderBase getOrder()
-      {
-        switch (order.Type)
-        {
-          case OrderTypeEnum.Stop: return side.Stop(name, volume, (decimal)order.Price);
-          case OrderTypeEnum.Limit: return side.Limit(name, volume, (decimal)order.Price);
-          case OrderTypeEnum.StopLimit: return side.StopLimit(name, volume, (decimal)order.ActivationPrice, (decimal)order.Price);
-        }
-
-        return side.Market(name, volume);
-      }
-
-      var exOrder = getOrder();
-
-      exOrder.Duration = GetTimeInForce(order.TimeSpan);
-
-      var exBrace = exOrder as OrderBase;
+      var orderType = GetOrderType(order.Type);
+      var duration = GetTimeInForce(order.TimeSpan);
+      var exOrder = new NewOrderRequest(name, volume, side, orderType, duration);
       var braces = order.Orders.Where(o => o.Instruction is InstructionEnum.Brace);
 
       if (braces.Any())
       {
-        switch (order.Side)
-        {
-          case OrderSideEnum.Buy:
-            {
-              var TP = GetBracePrice(order, 1);
-              var SL = GetBracePrice(order, -1);
-              exBrace = GetBraces(exOrder, SL, TP);
-            }
-            break;
+        var TP = GetBracePrice(order, order.Side is OrderSideEnum.Buy ? 1 : -1);
+        var SL = GetBracePrice(order, order.Side is OrderSideEnum.Buy ? -1 : 1);
 
-          case OrderSideEnum.Sell:
-            {
-              var SL = GetBracePrice(order, 1);
-              var TP = GetBracePrice(order, -1);
-              exBrace = GetBraces(exOrder, SL, TP);
-            }
-            break;
-        }
+        exOrder.OrderClass = OrderClass.Bracket;
+        exOrder.StopLossStopPrice = SL is null ? null : (decimal)SL;
+        exOrder.TakeProfitLimitPrice = TP is null ? null : (decimal)TP;
       }
 
-      return exBrace;
-    }
-
-    /// <summary>
-    /// Convert child orders to brackets
-    /// </summary>
-    /// <param name="order"></param>
-    /// <param name="SL"></param>
-    /// <param name="TP"></param>
-    /// <returns></returns>
-    protected static OrderBase GetBraces(SimpleOrderBase order, double? SL, double? TP)
-    {
-      switch (true)
-      {
-        case true when SL is not null && TP is not null: return order.StopLoss((decimal)SL).TakeProfit((decimal)TP);
-        case true when TP is not null: return order.TakeProfit((decimal)TP);
-        case true when SL is not null: return order.StopLoss((decimal)SL);
-      }
-
-      return order;
+      return exOrder;
     }
 
     /// <summary>
@@ -115,6 +71,23 @@ namespace Alpaca.Mappers
       }
 
       return TimeInForce.Gtc;
+    }
+
+    /// <summary>
+    /// Get order type
+    /// </summary>
+    /// <param name="orderType"></param>
+    /// <returns></returns>
+    public static OrderType GetOrderType(OrderTypeEnum? orderType)
+    {
+      switch (orderType)
+      {
+        case OrderTypeEnum.Stop: return OrderType.Stop;
+        case OrderTypeEnum.Limit: return OrderType.Limit;
+        case OrderTypeEnum.StopLimit: return OrderType.StopLimit;
+      }
+
+      return OrderType.Market;
     }
   }
 }

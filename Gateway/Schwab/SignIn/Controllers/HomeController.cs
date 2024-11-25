@@ -58,8 +58,10 @@ namespace SchwabSignIn.Controllers
 
     [HttpGet]
     [Route("signin")]
-    public ActionResult SignIn(string clientId, string clientSecret)
+    public ActionResult SignIn()
     {
+      var clientId = $"{Configuration["Schwab:ClientId"]}";
+      var clientSecret = $"{Configuration["Schwab:ClientSecret"]}";
       var query = HttpUtility.ParseQueryString(string.Empty);
 
       query.Add("response_type", "code");

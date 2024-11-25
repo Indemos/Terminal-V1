@@ -2,7 +2,6 @@ using Alpaca.Mappers;
 using Alpaca.Markets;
 using Distribution.Services;
 using Distribution.Stream;
-using Microsoft.AspNetCore.Identity.Data;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -449,6 +448,7 @@ namespace Alpaca
     /// <param name="orders"></param>
     /// <returns></returns>
     public override async Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders)
+
     {
       var response = new ResponseModel<IList<OrderModel>> { Data = [] };
 
@@ -456,13 +456,13 @@ namespace Alpaca
       {
         try
         {
+          Account.Orders[order.Id] = order;
+
           var exOrder = ExternalMap.GetOrder(order);
           var exResponse = await _tradingClient.PostOrderAsync(exOrder);
 
           order.Transaction.Id = $"{exResponse.OrderId}";
           order.Transaction.Status = InternalMap.GetStatus(exResponse.OrderStatus);
-
-          Account.Orders[order.Id] = order;
 
           response.Data.Add(order);
         }
@@ -486,7 +486,7 @@ namespace Alpaca
 
       foreach (var order in orders)
       {
-        await _tradingClient.CancelOrderAsync(Guid.Parse(order.Id));
+        await _tradingClient.CancelOrderAsync(Guid.Parse(order.Transaction.Id));
       }
 
       return response;
@@ -506,6 +506,7 @@ namespace Alpaca
         var point = InternalMap.GetPrice(streamPoint, instrument);
 
         instrument.Name = streamPoint.Symbol;
+        instrument.Point = point;
         instrument.Points.Add(point);
         instrument.PointGroups.Add(point, instrument.TimeFrame);
 

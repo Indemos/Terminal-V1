@@ -338,7 +338,7 @@ namespace Schwab
     /// <returns></returns>
     public override async Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders)
     {
-      var response = new ResponseModel<IList<OrderModel>>();
+      var response = new ResponseModel<IList<OrderModel>> { Data = [] };
 
       foreach (var order in orders)
       {
@@ -355,7 +355,7 @@ namespace Schwab
     /// <returns></returns>
     public override async Task<ResponseModel<IList<OrderModel>>> DeleteOrders(params OrderModel[] orders)
     {
-      var response = new ResponseModel<IList<OrderModel>>();
+      var response = new ResponseModel<IList<OrderModel>> { Data = [] };
 
       foreach (var order in orders)
       {
@@ -597,6 +597,7 @@ namespace Schwab
             point.Last = double.TryParse($"{data.Get(map.Get("Last Price"))}", out var x5) ? x5 : (point.Bid ?? point.Ask);
 
             instrument.Name = instrumentName;
+            instrument.Point = point;
             instrument.Points.Add(point);
             instrument.PointGroups.Add(point, instrument.TimeFrame);
 
@@ -712,6 +713,8 @@ namespace Schwab
 
       try
       {
+        Account.Orders[order.Id] = order;
+
         var exOrder = ExternalMap.GetOrder(order);
         var exResponse = await SendData<OrderMessage>($"/trader/v1/accounts/{_accountCode}/orders", HttpMethod.Post, exOrder);
 
@@ -730,8 +733,6 @@ namespace Schwab
 
           inResponse.Data.Transaction.Id = orderId;
           inResponse.Data.Transaction.Status = OrderStatusEnum.Filled;
-
-          Account.Orders[order.Id] = order;
         }
       }
       catch (Exception e)
@@ -753,7 +754,7 @@ namespace Schwab
 
       try
       {
-        var exResponse = await SendData<OrderMessage>($"/trader/v1/accounts/{_accountCode}/orders/{order.Id}", HttpMethod.Delete);
+        var exResponse = await SendData<OrderMessage>($"/trader/v1/accounts/{_accountCode}/orders/{order.Transaction.Id}", HttpMethod.Delete);
 
         if ((int)exResponse.Message.StatusCode >= 400)
         {

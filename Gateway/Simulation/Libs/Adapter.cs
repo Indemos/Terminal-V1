@@ -187,12 +187,13 @@ namespace Simulation
     /// <param name="orders"></param>
     public override Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders)
     {
-      var response = new ResponseModel<IList<OrderModel>>();
+      var response = new ResponseModel<IList<OrderModel>> { Data = [] };
       var validator = InstanceService<OrderPriceValidator>.Instance;
 
-      response.Errors = orders
-        .SelectMany(o => validator.Validate(o).Errors.Select(error => new ErrorModel { ErrorMessage = error.ErrorMessage }))
-        .ToList();
+      response.Errors = [.. orders.SelectMany(o => validator
+        .Validate(o)
+        .Errors
+        .Select(error => new ErrorModel { ErrorMessage = error.ErrorMessage }))];
 
       if (response.Errors.Count > 0)
       {
@@ -212,6 +213,8 @@ namespace Simulation
             case OrderTypeEnum.StopLimit: SendPendingOrder(nextOrder); break;
             case OrderTypeEnum.Market: SendOrder(nextOrder); break;
           }
+
+          response.Data.Add(nextOrder);
         }
       }
 
@@ -249,7 +252,9 @@ namespace Simulation
     {
       var nextOrder = order.Clone() as OrderModel;
 
+      nextOrder.Transaction.Id = order.Id;
       nextOrder.Transaction.Status = OrderStatusEnum.Pending;
+
       Account.Orders[nextOrder.Id] = nextOrder;
 
       return order;
@@ -262,29 +267,29 @@ namespace Simulation
     /// <returns></returns>
     protected virtual OrderModel SendOrder(OrderModel order)
     {
+      order.Transaction.Id = order.Id;
+
       if (Account.Positions.TryGetValue(order.Name, out var currentOrder))
       {
-        var (inOrder, outOrder) = Equals(currentOrder.Side, order.Side) ?
+        var (nextOrder, previousOrder) = Equals(currentOrder.Side, order.Side) ?
           IncreaseSide(currentOrder, order) :
           DecreaseSide(currentOrder, order);
 
         Account.Positions.Remove(order.Name, out var item);
 
-        if (inOrder?.Transaction?.Volume.Is(0) is false)
+        if (previousOrder?.Transaction?.Volume.Is(0) is false)
         {
-          Account.Positions[order.Name] = inOrder;
+          Account.Deals.Add(previousOrder);
+          Account.Balance += previousOrder.GetGainEstimate();
         }
 
-        if (outOrder?.Transaction?.Volume.Is(0) is false)
-        {
-          Account.Deals.Add(outOrder);
-          Account.Balance += outOrder.GetGainEstimate();
-        }
-
-        return order;
+        order = nextOrder;
       }
 
-      Account.Positions[order.Name] = order;
+      if (order?.Transaction?.Volume.Is(0) is false)
+      {
+        Account.Positions[order.Name] = order;
+      }
 
       return order;
     }
@@ -359,6 +364,7 @@ namespace Simulation
       var nextOrder = order.Clone() as OrderModel;
       var volume = nextOrder.Transaction.CurrentVolume + update.Transaction.Volume;
 
+      nextOrder.Transaction.Id = update.Id;
       nextOrder.Transaction.Volume = volume;
       nextOrder.Transaction.CurrentVolume = volume;
       nextOrder.Transaction.Time = update.Transaction.Time;
@@ -383,6 +389,7 @@ namespace Simulation
       var previousVolume = nextOrder.Transaction.CurrentVolume ?? 0;
       var nextVolume = Math.Abs(previousVolume - updateVolume);
 
+      nextOrder.Transaction.Id = update.Id;
       nextOrder.Transaction.Volume = nextVolume;
       nextOrder.Transaction.CurrentVolume = nextVolume;
       nextOrder.Transaction.Time = update.Transaction.Time;

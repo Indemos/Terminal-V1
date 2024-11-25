@@ -10,7 +10,7 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Id
     /// </summary>
-    public virtual string Id => Transaction?.Id;
+    public virtual string Id { get; set; }
 
     /// <summary>
     /// Name
@@ -84,6 +84,7 @@ namespace Terminal.Core.Models
     {
       Orders = [];
       OrderStream = o => { };
+      Id = $"{Guid.NewGuid():N}".ToUpper();
       Descriptor = $"{Guid.NewGuid():N}".ToUpper();
     }
 

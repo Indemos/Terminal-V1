@@ -49,11 +49,7 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Constructor
     /// </summary>
-    public TransactionModel()
-    {
-      Id = $"{Guid.NewGuid():N}".ToUpper();
-      Time = DateTime.Now;
-    }
+    public TransactionModel() => Time = DateTime.Now;
 
     /// <summary>
     /// Clone

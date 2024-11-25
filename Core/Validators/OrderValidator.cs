@@ -23,7 +23,6 @@ namespace Terminal.Core.Validators
 
       When(o => o.Transaction is not null, () =>
       {
-        RuleFor(o => o.Id).NotEmpty();
         RuleFor(o => o.Side).NotEmpty();
         RuleFor(o => o.Transaction.Status).Empty();
         RuleFor(o => o.Transaction.CurrentVolume).Empty();

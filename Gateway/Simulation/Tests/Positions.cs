@@ -70,7 +70,7 @@ namespace Terminal.Tests
       Assert.Equal(outOrder.Price, openPrice);
       Assert.Equal(outOrder.TimeSpan, OrderTimeSpanEnum.Gtc);
       Assert.NotEmpty(outOrder.Transaction.Id);
-      Assert.Equal(outOrder.Transaction.Id, order.Transaction.Id);
+      Assert.Equal(outOrder.Transaction.Id, order.Id);
       Assert.Equal(outOrder.Transaction.Status, OrderStatusEnum.Pending);
     }
 
@@ -126,7 +126,7 @@ namespace Terminal.Tests
       Assert.Equal(position.Type, OrderTypeEnum.Market);
       Assert.Equal(position.TimeSpan, OrderTimeSpanEnum.Gtc);
       Assert.Equal(position.Transaction.Status, OrderStatusEnum.Filled);
-      Assert.Equal(position.Transaction.Id, order.Transaction.Id);
+      Assert.Equal(position.Transaction.Id, order.Id);
       Assert.Equal(position.Transaction.Volume, order.Transaction.Volume);
       Assert.Equal(position.Transaction.CurrentVolume, order.Transaction.Volume);
       Assert.NotEmpty(position.Transaction.Id);

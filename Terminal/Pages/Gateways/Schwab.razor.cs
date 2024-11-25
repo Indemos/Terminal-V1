@@ -25,7 +25,7 @@ namespace Terminal.Pages.Gateways
     {
       Name = "SPY",
       Exchange = "SMART",
-      Type = InstrumentEnum.Shares,
+      Type = InstrumentEnum.Coins,
       TimeFrame = TimeSpan.FromMinutes(1)
     };
 
@@ -97,18 +97,18 @@ namespace Terminal.Pages.Gateways
       var instrument = account.Instruments[Instrument.Name];
       var performance = Performance.Calculate([account]);
 
-      //if (account.Orders.Count < 1 && account.Positions.Count < 1)
+      if (account.Orders.Count < 1 && account.Positions.Count < 1)
       {
         await OpenPositions(Instrument, 1);
       }
 
-      //if (Counter is 0 && account.Positions.Count > 0)
-      //{
-      //  await ClosePositions();
-      //  await OpenPositions(Instrument, account.Positions.First().Value.Side is OrderSideEnum.Buy ? -1 : 1);
-      //}
+      if (Counter is 0 && account.Positions.Count > 0)
+      {
+        await ClosePositions();
+        await OpenPositions(Instrument, account.Positions.First().Value.Side is OrderSideEnum.Buy ? -1 : 1);
+      }
 
-      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", View.ChartsView.GetShape<CandleShape>(point));
+      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", View.ChartsView.GetShape<BarShape>(point));
       View.ReportsView.UpdateItems(point.Time.Value.Ticks, "Performance", "Balance", new AreaShape { Y = account.Balance });
       View.ReportsView.UpdateItems(point.Time.Value.Ticks, "Performance", "PnL", new LineShape { Y = performance.Point.Last });
       View.DealsView.UpdateItems(account.Deals);
@@ -116,28 +116,18 @@ namespace Terminal.Pages.Gateways
       View.PositionsView.UpdateItems(account.Positions.Values);
     }
 
+    private double? GetPrice(double direction) => direction > 0 ?
+      Instrument.Point.Ask :
+      Instrument.Point.Bid;
+
     private async Task OpenPositions(InstrumentModel instrument, double direction)
     {
-      var price = Instrument.Points.Last().Last;
       var side = direction > 0 ? OrderSideEnum.Buy : OrderSideEnum.Sell;
       var stopSide = direction < 0 ? OrderSideEnum.Buy : OrderSideEnum.Sell;
       var adapter = View.Adapters["Prime"];
       var TP = new OrderModel
       {
-        Price = price + 15 * direction,
-        Side = stopSide,
-        Type = OrderTypeEnum.Stop,
-        Instruction = InstructionEnum.Brace,
-        Transaction = new()
-        {
-          Volume = 1,
-          Instrument = instrument
-        }
-      };
-
-      var SL = new OrderModel
-      {
-        Price = price - 15 * direction,
+        Price = GetPrice(direction) + 15 * direction,
         Side = stopSide,
         Type = OrderTypeEnum.Limit,
         Instruction = InstructionEnum.Brace,
@@ -148,9 +138,22 @@ namespace Terminal.Pages.Gateways
         }
       };
 
+      var SL = new OrderModel
+      {
+        Price = GetPrice(-direction) - 15 * direction,
+        Side = stopSide,
+        Type = OrderTypeEnum.Stop,
+        Instruction = InstructionEnum.Brace,
+        Transaction = new()
+        {
+          Volume = 1,
+          Instrument = instrument
+        }
+      };
+
       var order = new OrderModel
       {
-        Price = price,
+        Price = GetPrice(direction),
         Side = side,
         Type = OrderTypeEnum.Market,
         Orders = [SL, TP],
