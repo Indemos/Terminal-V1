@@ -53,14 +53,14 @@ namespace Terminal.Components
     {
       return new PositionRecord
       {
-        Group = o.Descriptor,
+        Name = o.Name,
+        Group = o.BasisName ?? o.Name,
         Time = o.Transaction.Time,
-        Name = o.Transaction.Instrument.Name,
         Side = o.Side ?? OrderSideEnum.None,
         Size = o.Transaction.CurrentVolume ?? 0,
         OpenPrice = o.Price ?? 0,
         ClosePrice = o.GetCloseEstimate() ?? 0,
-        Gain = o.GetGainEstimate() ?? 0
+        Gain = o.GetGainEstimate() ?? o.Gain ?? 0
       };
     }
   }

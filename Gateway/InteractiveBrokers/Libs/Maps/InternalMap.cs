@@ -7,6 +7,7 @@ using System.Linq;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace InteractiveBrokers.Mappers
 {
@@ -39,51 +40,47 @@ namespace InteractiveBrokers.Mappers
     /// <returns></returns>
     public static OrderModel GetOrder(OpenOrderMessage message)
     {
-      var instrument = new InstrumentModel
-      {
-        Name = message.Contract.Symbol,
-        Type = GetInstrumentType(message.Contract.SecType)
-      };
-
+      var instrument = GetInstrument(message.Contract);
       var action = new TransactionModel
       {
         Instrument = instrument,
         Id = $"{message.Order.PermId}",
-        Descriptor = $"{message.Order.OrderRef}",
+        Descriptor = $"{message.Contract.ConId}",
         CurrentVolume = (double)Math.Min(message.Order.FilledQuantity, message.Order.TotalQuantity),
         Volume = (double)message.Order.TotalQuantity,
         Time = DateTime.TryParse(message.Order.ActiveStartTime, out var o) ? o : DateTime.UtcNow,
-        Status = GetStatus(message.OrderState.Status)
+        Status = GetOrderStatus(message.OrderState.Status)
       };
 
-      var inOrder = new OrderModel
+      var order = new OrderModel
       {
         Transaction = action,
         Type = OrderTypeEnum.Market,
         Side = GetOrderSide(message.Order.Action),
-        TimeSpan = GetTimeSpan($"{message.Order.Duration}")
+        TimeSpan = GetTimeSpan($"{message.Order.Tif}"),
+        Price = message.Order.LmtPrice
       };
 
       switch (message.Order.OrderType)
       {
         case "STP":
-          inOrder.Type = OrderTypeEnum.Stop;
-          inOrder.Price = message.Order.AdjustedStopPrice;
+          order.Type = OrderTypeEnum.Stop;
+          order.Price = message.Order.AuxPrice;
           break;
 
         case "LMT":
-          inOrder.Type = OrderTypeEnum.Limit;
-          inOrder.Price = message.Order.LmtPrice;
+          order.Type = OrderTypeEnum.Limit;
+          order.Price = message.Order.LmtPrice;
           break;
 
         case "STP LMT":
-          inOrder.Type = OrderTypeEnum.StopLimit;
-          inOrder.Price = message.Order.AdjustedStopPrice;
-          inOrder.ActivationPrice = message.Order.LmtPrice;
+          order.Type = OrderTypeEnum.StopLimit;
+          order.Price = message.Order.LmtPrice;
+          order.ActivationPrice = message.Order.AuxPrice;
           break;
       }
 
-      return inOrder;
+      return order;
     }
 
     /// <summary>
@@ -93,35 +90,25 @@ namespace InteractiveBrokers.Mappers
     /// <returns></returns>
     public static OrderModel GetPosition(PositionMultiMessage message)
     {
-      var instrument = new InstrumentModel
-      {
-        Name = message.Contract.Symbol
-      };
-
+      var volume = (double)Math.Abs(message.Position);
+      var instrument = GetInstrument(message.Contract);
       var action = new TransactionModel
       {
-        Id = instrument.Name,
         Instrument = instrument,
-        Descriptor = instrument.Name,
-        Price = message.AverageCost,
-        CurrentVolume = (double)message.Position,
-        Volume = (double)message.Position
+        Descriptor = $"{message.Contract.ConId}",
+        CurrentVolume = volume,
+        Volume = volume
       };
 
       var order = new OrderModel
       {
         Transaction = action,
         Type = OrderTypeEnum.Market,
-        Side = GetPositionSide(message.Contract)
+        Price = message.AverageCost / Math.Max(1, instrument.Leverage.Value),
+        Side = message.Position > 0 ? OrderSideEnum.Buy : OrderSideEnum.Sell
       };
 
-      var gainLoss = 0.0;
-
-      return new OrderModel
-      {
-        GainMax = gainLoss,
-        GainMin = gainLoss
-      };
+      return order;
     }
 
     /// <summary>
@@ -129,29 +116,22 @@ namespace InteractiveBrokers.Mappers
     /// </summary>
     /// <param name="status"></param>
     /// <returns></returns>
-    public static OrderStatusEnum GetStatus(string status)
+    public static OrderStatusEnum? GetOrderStatus(string status)
     {
       switch (status)
       {
-        case "fill":
-        case "filled": return OrderStatusEnum.Filled;
-        case "partial_fill":
-        case "partially_filled": return OrderStatusEnum.Partitioned;
-        case "stopped":
-        case "expired":
-        case "rejected":
-        case "canceled":
-        case "done_for_day": return OrderStatusEnum.Canceled;
-        case "new":
-        case "held":
-        case "accepted":
-        case "suspended":
-        case "pending_new":
-        case "pending_cancel":
-        case "pending_replace": return OrderStatusEnum.Pending;
+        case "ApiPending":
+        case "Submitted":
+        case "PreSubmitted":
+        case "PendingSubmit":
+        case "PendingCancel": return OrderStatusEnum.Pending;
+        case "Inactive":
+        case "Cancelled":
+        case "ApiCancelled": return OrderStatusEnum.Canceled;
+        case "Filled": return OrderStatusEnum.Filled;
       }
 
-      return OrderStatusEnum.None;
+      return null;
     }
 
     /// <summary>
@@ -159,34 +139,15 @@ namespace InteractiveBrokers.Mappers
     /// </summary>
     /// <param name="side"></param>
     /// <returns></returns>
-    public static OrderSideEnum GetOrderSide(string side)
+    public static OrderSideEnum? GetOrderSide(string side)
     {
       switch (side)
       {
-        case "buy": return OrderSideEnum.Buy;
-        case "sell": return OrderSideEnum.Sell;
+        case "BUY": return OrderSideEnum.Buy;
+        case "SELL": return OrderSideEnum.Sell;
       }
 
-      return OrderSideEnum.None;
-    }
-
-    /// <summary>
-    /// Convert remote position side to local
-    /// </summary>
-    /// <param name="contract"></param>
-    /// <returns></returns>
-    public static OrderSideEnum GetPositionSide(Contract contract)
-    {
-      var buys = contract.ComboLegs.Where(o => o.Action.Contains("BUY")).Sum(o => o.Ratio);
-      var sells = contract.ComboLegs.Where(o => o.Action.Contains("SELL")).Sum(o => o.Ratio);
-
-      switch (true)
-      {
-        case true when buys > sells: return OrderSideEnum.Buy;
-        case true when buys < sells: return OrderSideEnum.Sell;
-      }
-
-      return OrderSideEnum.None;
+      return null;
     }
 
     /// <summary>
@@ -194,21 +155,16 @@ namespace InteractiveBrokers.Mappers
     /// </summary>
     /// <param name="span"></param>
     /// <returns></returns>
-    public static OrderTimeSpanEnum GetTimeSpan(string span)
+    public static OrderTimeSpanEnum? GetTimeSpan(string span)
     {
       switch (span)
       {
-        case "day": return OrderTimeSpanEnum.Day;
-        case "fok": return OrderTimeSpanEnum.Fok;
-        case "gtc": return OrderTimeSpanEnum.Gtc;
-        case "ioc": return OrderTimeSpanEnum.Ioc;
-        case "opg": return OrderTimeSpanEnum.Am;
-        case "cls": return OrderTimeSpanEnum.Pm;
+        case "DAY": return OrderTimeSpanEnum.Day;
+        case "GTC": return OrderTimeSpanEnum.Gtc;
       }
 
-      return OrderTimeSpanEnum.None;
+      return null;
     }
-
 
     /// <summary>
     /// Get external instrument type
@@ -220,14 +176,61 @@ namespace InteractiveBrokers.Mappers
       switch (message)
       {
         case "BOND": return InstrumentEnum.Bonds;
-        case "OPT": return InstrumentEnum.Shares;
-        case "STK": return InstrumentEnum.Options;
+        case "STK": return InstrumentEnum.Shares;
+        case "OPT": return InstrumentEnum.Options;
         case "FUT": return InstrumentEnum.Futures;
         case "CFD": return InstrumentEnum.Contracts;
         case "CASH": return InstrumentEnum.Currencies;
+        case "FOP": return InstrumentEnum.FuturesOptions;
       }
 
       return null;
+    }
+
+    /// <summary>
+    /// Get instrument from contract
+    /// </summary>
+    /// <param name="contract"></param>
+    /// <returns></returns>
+    public static InstrumentModel GetInstrument(Contract contract)
+    {
+      var expiration = contract.LastTradeDateOrContractMonth;
+      var response = new InstrumentModel
+      {
+        Id = $"{contract.ConId}",
+        Name = contract.LocalSymbol,
+        Exchange = contract.Exchange ?? "SMART",
+        Type = GetInstrumentType(contract.SecType),
+        Currency = new CurrencyModel { Name = contract.Currency },
+        Leverage = int.TryParse(contract.Multiplier, out var leverage) ? Math.Max(1, leverage) : 1
+      };
+
+      if (string.IsNullOrEmpty(contract.Symbol) is false)
+      {
+        response.Basis = new InstrumentModel
+        {
+          Name = contract.Symbol
+        };
+      }
+
+      if (string.IsNullOrEmpty(expiration) is false)
+      {
+        var derivative = new DerivativeModel
+        {
+          Strike = contract.Strike,
+          Expiration = DateTime.ParseExact(expiration, "yyyyMMdd", CultureInfo.InvariantCulture)
+        };
+
+        switch (contract.Right)
+        {
+          case "P": derivative.Side = OptionSideEnum.Put; break;
+          case "C": derivative.Side = OptionSideEnum.Call; break;
+        }
+
+        response.Derivative = derivative;
+      }
+
+      return response;
     }
 
     /// <summary>

@@ -80,7 +80,7 @@ namespace Derivative.Pages
       {
         Groups[caption] = new Dictionary<string, SectionModel> { [caption] = new SectionModel { Collection = [] } };
         await InvokeAsync(StateHasChanged);
-        Groups[caption].ForEach(async o => await Subscribe(o.Value, response));
+        await Task.WhenAll(Groups[caption].Select(async o => await Subscribe(o.Value, response)));
       });
     }
 

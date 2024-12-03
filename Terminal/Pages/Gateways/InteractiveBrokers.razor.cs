@@ -1,8 +1,7 @@
-using Alpaca;
-using Alpaca.Markets;
 using Canvas.Core.Shapes;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
+using InteractiveBrokers;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
@@ -15,7 +14,7 @@ using Terminal.Core.Models;
 
 namespace Terminal.Pages.Gateways
 {
-  public partial class Alpaca
+  public partial class InteractiveBrokers
   {
     [Inject] IConfiguration Configuration { get; set; }
 
@@ -24,9 +23,9 @@ namespace Terminal.Pages.Gateways
     protected virtual PerformanceIndicator Performance { get; set; }
     protected virtual InstrumentModel Instrument { get; set; } = new InstrumentModel
     {
-      Name = "BTC/USD",
+      Name = "SPY",
       Exchange = "SMART",
-      Type = InstrumentEnum.Coins,
+      Type = InstrumentEnum.Shares,
       TimeFrame = TimeSpan.FromMinutes(1)
     };
 
@@ -37,13 +36,17 @@ namespace Terminal.Pages.Gateways
         await CreateViews();
 
         View.OnPreConnect = CreateAccounts;
-        View.OnPostConnect = () =>
+        View.OnPostConnect = async () =>
         {
           var account = View.Adapters["Prime"].Account;
 
           View.DealsView.UpdateItems(account.Deals);
           View.OrdersView.UpdateItems(account.Orders.Values);
           View.PositionsView.UpdateItems(account.Positions.Values);
+
+          var dom = await View.Adapters["Prime"].GetDom(new PointScreenerModel { Instrument = Instrument }, null);
+          Instrument.Point = dom.Data.Asks.First();
+          await OpenPositions(Instrument, 1);
         };
       }
 
@@ -60,7 +63,7 @@ namespace Terminal.Pages.Gateways
     {
       var account = new Account
       {
-        Descriptor = "Demo",
+        Descriptor = Configuration["InteractiveBrokers:Account"],
         Instruments = new ConcurrentDictionary<string, InstrumentModel>
         {
           [Instrument.Name] = Instrument
@@ -69,10 +72,7 @@ namespace Terminal.Pages.Gateways
 
       View.Adapters["Prime"] = new Adapter
       {
-        Account = account,
-        Source = Environments.Paper,
-        ClientId = Configuration["Alpaca:PaperToken"],
-        ClientSecret = Configuration["Alpaca:PaperSecret"]
+        Account = account
       };
 
       Performance = new PerformanceIndicator { Name = "Balance" };
@@ -84,7 +84,7 @@ namespace Terminal.Pages.Gateways
         {
           if (Equals(message.Next.Instrument.Name, Instrument.Name))
           {
-            await OnData(message.Next);
+            //await OnData(message.Next);
           }
         });
     }
@@ -156,7 +156,7 @@ namespace Terminal.Pages.Gateways
         Price = GetPrice(direction),
         Side = side,
         Type = OrderTypeEnum.Market,
-        //Orders = [SL, TP],
+        Orders = [SL, TP],
         Transaction = new()
         {
           Volume = 1,

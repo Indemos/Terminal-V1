@@ -93,8 +93,7 @@ namespace Alpaca
 
         await Task.WhenAll(_streamingClients.Values.Select(o => o.ConnectAndAuthenticateAsync()));
         await GetAccount([]);
-
-        Account.Instruments.ForEach(async o => await Subscribe(o.Value));
+        await Task.WhenAll(Account.Instruments.Values.Select(Subscribe));
 
         response.Data = StatusEnum.Success;
       }
@@ -182,15 +181,18 @@ namespace Alpaca
     /// </summary>
     /// <param name="instrument"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<StatusEnum>> Unsubscribe(InstrumentModel instrument)
+    public override async Task<ResponseModel<StatusEnum>> Unsubscribe(InstrumentModel instrument)
     {
       var response = new ResponseModel<StatusEnum>();
 
-      void unsubscribe<T>() where T : class, ISubscriptionHandler
+      async Task unsubscribe<T>() where T : class, ISubscriptionHandler
       {
         if (_subscriptions.TryGetValue(instrument.Name, out var subs))
         {
-          subs.ForEach(async o => await (_streamingClients[instrument.Type.Value] as T).UnsubscribeAsync(o));
+          foreach (var sub in subs)
+          {
+            await (_streamingClients[instrument.Type.Value] as T).UnsubscribeAsync(sub);
+          }
         }
       }
 
@@ -198,8 +200,8 @@ namespace Alpaca
       {
         switch (instrument.Type)
         {
-          case InstrumentEnum.Coins: unsubscribe<IAlpacaCryptoStreamingClient>(); break;
-          case InstrumentEnum.Shares: unsubscribe<IAlpacaDataStreamingClient>(); break;
+          case InstrumentEnum.Coins: await unsubscribe<IAlpacaCryptoStreamingClient>(); break;
+          case InstrumentEnum.Shares: await unsubscribe<IAlpacaDataStreamingClient>(); break;
         }
 
         response.Data = StatusEnum.Success;
@@ -209,7 +211,7 @@ namespace Alpaca
         response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
       }
 
-      return Task.FromResult(response);
+      return response;
     }
 
     /// <summary>
@@ -231,12 +233,10 @@ namespace Alpaca
         Account.Orders = orders.Data.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
         Account.Positions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
 
-        orders
+        positions
           .Data
-          .Select(o => o.Transaction.Instrument)
-          .Concat(positions.Data.Select(o => o.Transaction.Instrument))
           .Where(o => Account.Instruments.ContainsKey(o.Name) is false)
-          .ForEach(o => Account.Instruments[o.Name] = o);
+          .ForEach(o => Account.Instruments[o.Name] = o.Transaction.Instrument);
 
         response.Data = Account;
       }

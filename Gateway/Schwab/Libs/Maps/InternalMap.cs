@@ -13,25 +13,6 @@ namespace Schwab.Mappers
     /// <summary>
     /// Map fields in the stream
     /// </summary>
-    /// <param name="instrument"></param>
-    /// <returns></returns>
-    public static IDictionary<string, string> GetStreamMap(InstrumentModel instrument)
-    {
-      switch (instrument.Type)
-      {
-        case InstrumentEnum.Shares: return StreamEquityMap.Map;
-        case InstrumentEnum.Futures: return StreamFutureMap.Map;
-        case InstrumentEnum.Currencies: return StreamCurrencyMap.Map;
-        case InstrumentEnum.Options: return StreamOptionMap.Map;
-        case InstrumentEnum.FuturesOptions: return StreamFutureOptionMap.Map;
-      }
-
-      return null;
-    }
-
-    /// <summary>
-    /// Map fields in the stream
-    /// </summary>
     /// <param name="assetType"></param>
     /// <returns></returns>
     public static IDictionary<string, string> GetStreamMap(string assetType)
@@ -107,7 +88,9 @@ namespace Schwab.Mappers
         Bid = o.BidPrice,
         AskSize = o.AskSize,
         BidSize = o.BidSize,
-        Last = o.AskPrice ?? o.BidPrice,
+        Last = o.AskTime > o.BidTime ? o.AskPrice : o.BidPrice,
+        Time = DateTimeOffset.FromUnixTimeMilliseconds(o.QuoteTime ?? DateTime.Now.Ticks).UtcDateTime,
+        Instrument = new InstrumentModel { Name = message.Symbol }
       };
 
       return point;
@@ -209,28 +192,6 @@ namespace Schwab.Mappers
     }
 
     /// <summary>
-    /// Get internal point
-    /// </summary>
-    /// <param name="message"></param>
-    /// <returns></returns>
-    public static PointModel GetPoint(AssetMessage message)
-    {
-      var o = message.Quote;
-      var point = new PointModel
-      {
-        Ask = o.AskPrice,
-        Bid = o.BidPrice,
-        AskSize = o.AskSize,
-        BidSize = o.BidSize,
-        Time = DateTimeOffset.FromUnixTimeMilliseconds(o.QuoteTime ?? DateTime.Now.Ticks).UtcDateTime,
-        Last = o.AskTime > o.BidTime ? o.AskPrice : o.BidPrice,
-        Instrument = new InstrumentModel { Name = message.Symbol }
-      };
-
-      return point;
-    }
-
-    /// <summary>
     /// Get internal point from bar
     /// </summary>
     /// <param name="message"></param>
@@ -257,8 +218,18 @@ namespace Schwab.Mappers
     /// <returns></returns>
     public static OrderModel GetPosition(PositionMessage message)
     {
+      var price = message.AveragePrice + message.Instrument.NetChange;
+      var volume = message.LongQuantity + message.ShortQuantity;
+      var point = new PointModel
+      {
+        Bid = price,
+        Ask = price,
+        Last = price
+      };
+
       var instrument = new InstrumentModel
       {
+        Point = point,
         Name = message.Instrument.Symbol,
         Type = GetInstrumentType(message.Instrument.AssetType)
       };
@@ -268,21 +239,17 @@ namespace Schwab.Mappers
         Instrument = instrument,
         Price = message.AveragePrice,
         Descriptor = message.Instrument.Symbol,
-        CurrentVolume = message.LongQuantity + message.ShortQuantity,
-        Volume = message.LongQuantity + message.ShortQuantity
+        CurrentVolume = volume,
+        Volume = volume
       };
 
       var order = new OrderModel
       {
         Transaction = action,
         Type = OrderTypeEnum.Market,
-        Side = GetPositionSide(message)
+        Side = GetPositionSide(message),
+        Price = message.AveragePrice
       };
-
-      var gainLoss = message.LongOpenProfitLoss;
-
-      order.GainMax = gainLoss;
-      order.GainMin = gainLoss;
 
       return order;
     }
@@ -292,7 +259,7 @@ namespace Schwab.Mappers
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    public static OrderSideEnum GetPositionSide(PositionMessage message)
+    public static OrderSideEnum? GetPositionSide(PositionMessage message)
     {
       switch (true)
       {
@@ -300,7 +267,7 @@ namespace Schwab.Mappers
         case true when message.ShortQuantity > 0: return OrderSideEnum.Sell;
       }
 
-      return OrderSideEnum.None;
+      return null;
     }
 
     /// <summary>
@@ -310,10 +277,7 @@ namespace Schwab.Mappers
     /// <returns></returns>
     public static OrderModel GetOrder(OrderMessage message)
     {
-      var subOrders = message
-        ?.OrderLegCollection
-        ?.ToList();
-
+      var subOrders = message?.OrderLegCollection ?? [];
       var instrument = new InstrumentModel
       {
         Name = string.Join($" / ", subOrders.Select(o => o?.Instrument?.Symbol))
@@ -324,13 +288,13 @@ namespace Schwab.Mappers
         Id = message.OrderId,
         Descriptor = message.OrderId,
         Instrument = instrument,
-        CurrentVolume = message.FilledQuantity,
-        Volume = message.Quantity,
+        CurrentVolume = GetValue(message.FilledQuantity, message.Quantity),
+        Volume = GetValue(message.Quantity, message.FilledQuantity),
         Time = message.EnteredTime,
         Status = GetStatus(message)
       };
 
-      var inOrder = new OrderModel
+      var order = new OrderModel
       {
         Transaction = action,
         Type = OrderTypeEnum.Market,
@@ -341,31 +305,31 @@ namespace Schwab.Mappers
       switch (message.OrderType.ToUpper())
       {
         case "STOP":
-          inOrder.Type = OrderTypeEnum.Stop;
-          inOrder.Price = message.Price;
+          order.Type = OrderTypeEnum.Stop;
+          order.Price = message.Price;
           break;
 
         case "LIMIT":
-          inOrder.Type = OrderTypeEnum.Limit;
-          inOrder.Price = message.Price;
+          order.Type = OrderTypeEnum.Limit;
+          order.Price = message.Price;
           break;
 
         case "STOP_LIMIT":
-          inOrder.Type = OrderTypeEnum.StopLimit;
-          inOrder.Price = message.Price;
-          inOrder.ActivationPrice = message.StopPrice;
+          order.Type = OrderTypeEnum.StopLimit;
+          order.Price = message.Price;
+          order.ActivationPrice = message.StopPrice;
           break;
 
         case "NET_DEBIT":
         case "NET_CREDIT":
-          inOrder.Type = OrderTypeEnum.Limit;
-          inOrder.Price = message.Price;
+          order.Type = OrderTypeEnum.Limit;
+          order.Price = message.Price;
           break;
       }
 
-      if (subOrders.Count > 0)
+      if (subOrders.Count is not 0)
       {
-        inOrder.Instruction = InstructionEnum.Group;
+        order.Instruction = InstructionEnum.Group;
 
         foreach (var subOrder in subOrders)
         {
@@ -381,7 +345,7 @@ namespace Schwab.Mappers
             Volume = subOrder.Quantity
           };
 
-          inOrder.Orders.Add(new OrderModel
+          order.Orders.Add(new OrderModel
           {
             Transaction = subAction,
             Side = GetSubOrderSide(subOrder.Instruction)
@@ -389,7 +353,7 @@ namespace Schwab.Mappers
         }
       }
 
-      return inOrder;
+      return order;
     }
 
     /// <summary>
@@ -497,5 +461,13 @@ namespace Schwab.Mappers
     /// <param name="o"></param>
     /// <returns></returns>
     public static bool E(string x, string o) => string.Equals(x, o, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Get value or default
+    /// </summary>
+    /// <param name="price"></param>
+    /// <param name="origin"></param>
+    /// <returns></returns>
+    public static double GetValue(double? price, double? origin) => (price is 0 or null ? origin : price).Value;
   }
 }

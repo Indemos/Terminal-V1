@@ -4,7 +4,8 @@
     <MudTh><MudTableSortLabel SortBy="new Func<OrderRecord, object>(o => o.Name)">Instrument</MudTableSortLabel></MudTh>
     <MudTh><MudTableSortLabel SortBy="new Func<OrderRecord, object>(o => o.Size)">Size</MudTableSortLabel></MudTh>
     <MudTh><MudTableSortLabel SortBy="new Func<OrderRecord, object>(o => o.Side)">Side</MudTableSortLabel></MudTh>
-    <MudTh><MudTableSortLabel SortBy="new Func<OrderRecord, object>(o => o.Price)">Price</MudTableSortLabel></MudTh>
+    <MudTh><MudTableSortLabel SortBy="new Func<OrderRecord, object>(o => o.Price)">Open Price</MudTableSortLabel></MudTh>
+    <MudTh><MudTableSortLabel SortBy="new Func<OrderRecord, object>(o => o.Type)">Type</MudTableSortLabel></MudTh>
   </HeaderContent>
   <GroupHeaderTemplate>
     <MudTh Class="mud-table-cell-custom-group" colspan="7">@($"{context.GroupName}: {context.Key}") </MudTh>
@@ -15,6 +16,7 @@
     <MudTd DataLabel="Size">@context.Size</MudTd>
     <MudTd DataLabel="Side">@context.Side</MudTd>
     <MudTd DataLabel="Open Price">@($"{context.Price:0.00}")</MudTd>
+    <MudTd DataLabel="Type">@context.Type</MudTd>
   </RowTemplate>
   <PagerContent>
     <MudTablePager PageSizeOptions="new int[]{50, 100}" />

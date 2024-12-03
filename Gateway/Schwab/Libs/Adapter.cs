@@ -127,7 +127,7 @@ namespace Schwab
         _connections.Add(_streamer);
         _connections.Add(interval);
 
-        Account.Instruments.ForEach(async o => await Subscribe(o.Value));
+        await Task.WhenAll(Account.Instruments.Values.Select(Subscribe));
 
         response.Data = StatusEnum.Success;
       }
@@ -389,12 +389,10 @@ namespace Schwab
         Account.Orders = orders.Data.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
         Account.Positions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
 
-        orders
+        positions
           .Data
-          .Select(o => o.Transaction.Instrument)
-          .Concat(positions.Data.Select(o => o.Transaction.Instrument))
           .Where(o => Account.Instruments.ContainsKey(o.Name) is false)
-          .ForEach(o => Account.Instruments[o.Name] = o);
+          .ForEach(o => Account.Instruments[o.Name] = o.Transaction.Instrument);
 
         response.Data = Account;
       }
@@ -595,6 +593,7 @@ namespace Schwab
             point.BidSize = double.TryParse($"{data.Get(map.Get("Bid Size"))}", out var x3) ? x3 : null;
             point.AskSize = double.TryParse($"{data.Get(map.Get("Ask Size"))}", out var x4) ? x4 : null;
             point.Last = double.TryParse($"{data.Get(map.Get("Last Price"))}", out var x5) ? x5 : (point.Bid ?? point.Ask);
+            point.TimeFrame = instrument.TimeFrame;
 
             instrument.Name = instrumentName;
             instrument.Point = point;

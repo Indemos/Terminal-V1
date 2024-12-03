@@ -1,5 +1,4 @@
 using Schwab.Messages;
-using System.Collections.Generic;
 using System.Linq;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
@@ -9,20 +8,6 @@ namespace Schwab.Mappers
 {
   public class ExternalMap
   {
-    public static string GetStreamingService(InstrumentModel instrument)
-    {
-      switch (instrument.Type)
-      {
-        case InstrumentEnum.Shares: return "LEVELONE_EQUITIES";
-        case InstrumentEnum.Futures: return "LEVELONE_FUTURES";
-        case InstrumentEnum.Currencies: return "LEVELONE_FOREX";
-        case InstrumentEnum.Options: return "LEVELONE_OPTIONS";
-        case InstrumentEnum.FuturesOptions: return "LEVELONE_FUTURES_OPTIONS";
-      }
-
-      return null;
-    }
-
     /// <summary>
     /// Convert remote order from brokerage to local record
     /// </summary>
@@ -67,6 +52,7 @@ namespace Schwab.Mappers
       message.ChildOrderStrategies = order
         .Orders
         .Where(o => o.Instruction is InstructionEnum.Brace)
+        .Where(o => Equals(o.Name, order.Name))
         .Select(o =>
         {
           var subOrder = GetOrder(o);
@@ -86,6 +72,25 @@ namespace Schwab.Mappers
       }
 
       return message;
+    }
+
+    /// <summary>
+    /// Service name based on asset type
+    /// </summary>
+    /// <param name="instrument"></param>
+    /// <returns></returns>
+    public static string GetStreamingService(InstrumentModel instrument)
+    {
+      switch (instrument.Type)
+      {
+        case InstrumentEnum.Shares: return "LEVELONE_EQUITIES";
+        case InstrumentEnum.Futures: return "LEVELONE_FUTURES";
+        case InstrumentEnum.Currencies: return "LEVELONE_FOREX";
+        case InstrumentEnum.Options: return "LEVELONE_OPTIONS";
+        case InstrumentEnum.FuturesOptions: return "LEVELONE_FUTURES_OPTIONS";
+      }
+
+      return null;
     }
 
     /// <summary>

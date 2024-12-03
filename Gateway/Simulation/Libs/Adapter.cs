@@ -84,7 +84,7 @@ namespace Simulation
 
       _instruments.ForEach(o => _connections.Add(o.Value));
 
-      Account.Instruments.ForEach(async o => await Subscribe(o.Value));
+      await Task.WhenAll(Account.Instruments.Values.Select(Subscribe));
 
       response.Data = StatusEnum.Success;
 
@@ -149,16 +149,16 @@ namespace Simulation
     /// <summary>
     /// Save state and dispose
     /// </summary>
-    public override Task<ResponseModel<StatusEnum>> Disconnect()
+    public override async Task<ResponseModel<StatusEnum>> Disconnect()
     {
       var response = new ResponseModel<StatusEnum>();
 
-      Account.Instruments.ForEach(async o => await Unsubscribe(o.Value));
+      await Task.WhenAll(Account.Instruments.Values.Select(Unsubscribe));
 
       _connections?.ForEach(o => o?.Dispose());
       _connections?.Clear();
 
-      return Task.FromResult(response);
+      return response;
     }
 
     /// <summary>

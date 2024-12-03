@@ -1,7 +1,5 @@
 using Alpaca.Markets;
-using System.Drawing;
 using System.Linq;
-using System.Xml.Linq;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
 
@@ -23,7 +21,22 @@ namespace Alpaca.Mappers
       var orderType = GetOrderType(order.Type);
       var duration = GetTimeInForce(order.TimeSpan);
       var exOrder = new NewOrderRequest(name, volume, side, orderType, duration);
-      var braces = order.Orders.Where(o => o.Instruction is InstructionEnum.Brace);
+      var braces = order
+        .Orders
+        .Where(o => o.Instruction is InstructionEnum.Brace)
+        .Where(o => Equals(o.Name, order.Name));
+
+      exOrder.ClientOrderId = order.Id;
+
+      switch (order.Type)
+      {
+        case OrderTypeEnum.Stop: exOrder.StopPrice = (decimal)order.Price; break;
+        case OrderTypeEnum.Limit: exOrder.LimitPrice = (decimal)order.Price; break;
+        case OrderTypeEnum.StopLimit:
+          exOrder.LimitPrice = (decimal)order.Price;
+          exOrder.StopPrice = (decimal)order.ActivationPrice;
+          break;
+      }
 
       if (braces.Any())
       {
@@ -36,21 +49,6 @@ namespace Alpaca.Mappers
       }
 
       return exOrder;
-    }
-
-    /// <summary>
-    /// Get price for brackets
-    /// </summary>
-    /// <param name="order"></param>
-    /// <param name="direction"></param>
-    /// <returns></returns>
-    protected static double? GetBracePrice(OrderModel order, double direction)
-    {
-      var nextOrder = order
-        .Orders
-        .FirstOrDefault(o => (o.Price - order.Price) * direction > 0);
-
-      return nextOrder?.Price;
     }
 
     /// <summary>
@@ -88,6 +86,21 @@ namespace Alpaca.Mappers
       }
 
       return OrderType.Market;
+    }
+
+    /// <summary>
+    /// Get price for brackets
+    /// </summary>
+    /// <param name="order"></param>
+    /// <param name="direction"></param>
+    /// <returns></returns>
+    protected static double? GetBracePrice(OrderModel order, double direction)
+    {
+      var nextOrder = order
+        .Orders
+        .FirstOrDefault(o => (o.Price - order.Price) * direction > 0);
+
+      return nextOrder?.Price;
     }
   }
 }

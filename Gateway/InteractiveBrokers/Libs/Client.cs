@@ -5,6 +5,7 @@ using InteractiveBrokers.Messages;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace InteractiveBrokers
@@ -1019,7 +1020,7 @@ namespace InteractiveBrokers
     }
 
     protected void Run(Action cb, object state) => Scheduler.Send(cb, new OptionModel { IsRemovable = false });
-
+    
     public void Dispose() => Scheduler.Dispose();
   }
 }

@@ -120,7 +120,7 @@ namespace Coinbase
         _connections.Add(_streamer);
         _connections.Add(scheduler);
 
-        Account.Instruments.ForEach(async o => await Subscribe(o.Value));
+        await Task.WhenAll(Account.Instruments.Values.Select(Subscribe));
 
         response.Data = StatusEnum.Success;
       }

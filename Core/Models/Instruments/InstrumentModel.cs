@@ -8,6 +8,11 @@ namespace Terminal.Core.Domains
   public class InstrumentModel : ICloneable
   {
     /// <summary>
+    /// ID
+    /// </summary>
+    public virtual string Id { get; set; }
+
+    /// <summary>
     /// Name
     /// </summary>
     public virtual string Name { get; set; }

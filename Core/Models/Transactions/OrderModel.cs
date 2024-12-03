@@ -8,19 +8,29 @@ namespace Terminal.Core.Models
   public class OrderModel : ICloneable
   {
     /// <summary>
-    /// Id
-    /// </summary>
-    public virtual string Id { get; set; }
-
-    /// <summary>
     /// Name
     /// </summary>
     public virtual string Name => Transaction?.Instrument?.Name;
 
     /// <summary>
+    /// Basis name
+    /// </summary>
+    public virtual string BasisName => Transaction?.Instrument?.Basis?.Name;
+
+    /// <summary>
+    /// Client order ID
+    /// </summary>
+    public virtual string Id { get; set; }
+
+    /// <summary>
     /// Group
     /// </summary>
     public virtual string Descriptor { get; set; }
+
+    /// <summary>
+    /// Current PnL
+    /// </summary>
+    public virtual double? Gain { get; set; }
 
     /// <summary>
     /// Min possible PnL in account's currency
@@ -166,7 +176,7 @@ namespace Terminal.Core.Models
     /// <returns></returns>
     public double? GetPointsEstimate(double? price = null)
     {
-      return (((price ?? GetCloseEstimate()) - Price) * GetDirection()) ?? 0;
+      return ((price ?? GetCloseEstimate()) - Price) * GetDirection();
     }
 
     /// <summary>
@@ -179,10 +189,11 @@ namespace Terminal.Core.Models
       var volume = Transaction.CurrentVolume;
       var instrument = Transaction.Instrument;
       var step = instrument.StepValue / instrument.StepSize;
-      var estimate = (volume * GetPointsEstimate(price) * step * instrument.Leverage - instrument.Commission) ?? 0;
+      var estimate = volume * GetPointsEstimate(price) * step * instrument.Leverage - instrument.Commission;
 
-      GainMin = Math.Min(GainMin ?? estimate, estimate);
-      GainMax = Math.Max(GainMax ?? estimate, estimate);
+      Gain = estimate ?? Gain ?? 0;
+      GainMin = Math.Min(GainMin ?? 0, Gain.Value);
+      GainMax = Math.Max(GainMax ?? 0, Gain.Value);
 
       return estimate;
     }

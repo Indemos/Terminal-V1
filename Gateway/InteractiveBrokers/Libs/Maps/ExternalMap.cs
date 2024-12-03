@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 
 namespace InteractiveBrokers.Mappers
@@ -14,28 +15,51 @@ namespace InteractiveBrokers.Mappers
     /// <summary>
     /// Convert remote order from brokerage to local record
     /// </summary>
+    /// <param name="orderId"></param>
     /// <param name="orderModel"></param>
+    /// <param name="contracts"></param>
     /// <returns></returns>
-    public static OpenOrderMessage GetOrder(OrderModel orderModel)
+    public static OpenOrderMessage GetOrder(int orderId, OrderModel orderModel, IDictionary<string, Contract> contracts)
     {
+      var order = GetSubOrder(orderId, orderModel);
       var action = orderModel.Transaction;
-      var order = new Order();
+      var instrument = action.Instrument;
+      var contract = contracts.Get(instrument.Name) ?? GetContract(action.Instrument);
+
+      return new OpenOrderMessage
+      {
+        Order = order,
+        Contract = contract
+      };
+    }
+
+    /// <summary>
+    /// Instrument to contract
+    /// </summary>
+    /// <param name="instrument"></param>
+    /// <returns></returns>
+    public static Contract GetContract(InstrumentModel instrument)
+    {
+      if (int.TryParse(instrument.Id, out var id))
+      {
+        return new Contract { ConId = id };
+      }
+
+      var basis = instrument.Basis;
+      var derivative = instrument.Derivative;
       var contract = new Contract
       {
-        Symbol = action.Instrument.Name,
-        Exchange = action.Instrument.Exchange ?? "SMART",
-        SecType = GetInstrumentType(action.Instrument.Type) ?? "STK",
-        Currency = action.Instrument.Currency?.Name ?? nameof(CurrencyEnum.USD)
+        Symbol = basis?.Name,
+        LocalSymbol = instrument.Name,
+        Multiplier = $"{instrument.Leverage}",
+        Exchange = instrument.Exchange ?? "SMART",
+        SecType = GetInstrumentType(instrument.Type),
+        Currency = instrument.Currency?.Name ?? nameof(CurrencyEnum.USD)
       };
 
-      if (string.Equals(contract.SecType, "OPT"))
+      if (derivative is not null)
       {
-        var option = action.Instrument;
-        var derivative = option.Derivative;
-
-        contract.Strike = derivative.Strike.Value;
-        contract.LocalSymbol = option.Basis.Name;
-        contract.Multiplier = $"{option.Leverage}";
+        contract.Strike = derivative.Strike ?? 0;
         contract.LastTradeDateOrContractMonth = $"{derivative.Expiration:yyyyMMdd}";
 
         switch (derivative.Side)
@@ -45,51 +69,7 @@ namespace InteractiveBrokers.Mappers
         }
       }
 
-      //{
-      //  Quantity = action.Volume,
-      //  Symbol = action.Instrument.Name,
-      //  TimeInForce = GetTimeSpan(order.TimeSpan.Value),
-      //  OrderType = "market"
-      //};
-
-      switch (orderModel.Side)
-      {
-        case OrderSideEnum.Buy: order.Action = "BUY"; break;
-        case OrderSideEnum.Sell: order.Action = "SELL"; break;
-      }
-
-      var message = new OpenOrderMessage
-      {
-        Order = order,
-        Contract = contract
-      };
-
-      //switch (orderModel.Type)
-      //{
-      //  case OrderTypeEnum.Stop: message.StopPrice = orderModel.Price; break;
-      //  case OrderTypeEnum.Limit: message.LimitPrice = orderModel.Price; break;
-      //  case OrderTypeEnum.StopLimit: message.StopPrice = orderModel.ActivationPrice; message.LimitPrice = orderModel.Price; break;
-      //}
-
-      //if (orderModel.Orders.Any())
-      //{
-      //  message.OrderClass = "bracket";
-
-      //  switch (orderModel.Side)
-      //  {
-      //    case OrderSideEnum.Buy:
-      //      message.StopLoss = GetBracket(orderModel, 1);
-      //      message.TakeProfit = GetBracket(orderModel, -1);
-      //      break;
-
-      //    case OrderSideEnum.Sell:
-      //      message.StopLoss = GetBracket(orderModel, -1);
-      //      message.TakeProfit = GetBracket(orderModel, 1);
-      //      break;
-      //  }
-      //}
-
-      return null;
+      return contract;
     }
 
     /// <summary>
@@ -97,19 +77,48 @@ namespace InteractiveBrokers.Mappers
     /// </summary>
     /// <param name="span"></param>
     /// <returns></returns>
-    public static string GetTimeSpan(OrderTimeSpanEnum span)
+    public static string GetTimeSpan(OrderTimeSpanEnum? span)
     {
       switch (span)
       {
-        case OrderTimeSpanEnum.Day: return "day";
-        case OrderTimeSpanEnum.Fok: return "fok";
-        case OrderTimeSpanEnum.Gtc: return "gtc";
-        case OrderTimeSpanEnum.Ioc: return "ioc";
-        case OrderTimeSpanEnum.Am: return "opg";
-        case OrderTimeSpanEnum.Pm: return "cls";
+        case OrderTimeSpanEnum.Day: return "DAY";
+        case OrderTimeSpanEnum.Gtc: return "GTC";
       }
 
       return null;
+    }
+
+    /// <summary>
+    /// Order side
+    /// </summary>
+    /// <param name="order"></param>
+    /// <returns></returns>
+    public static string GetSide(OrderSideEnum? side)
+    {
+      switch (side)
+      {
+        case OrderSideEnum.Buy: return "BUY";
+        case OrderSideEnum.Sell: return "SELL";
+      }
+
+      return null;
+    }
+
+    /// <summary>
+    /// Order side
+    /// </summary>
+    /// <param name="order"></param>
+    /// <returns></returns>
+    public static string GetOrderType(OrderTypeEnum? message)
+    {
+      switch (message)
+      {
+        case OrderTypeEnum.Stop: return "STP";
+        case OrderTypeEnum.Limit: return "LMT";
+        case OrderTypeEnum.StopLimit: return "STP LMT";
+      }
+
+      return "MKT";
     }
 
     /// <summary>
@@ -122,11 +131,12 @@ namespace InteractiveBrokers.Mappers
       switch (message)
       {
         case InstrumentEnum.Bonds: return "BOND";
-        case InstrumentEnum.Shares: return "OPT";
-        case InstrumentEnum.Options: return "STK";
+        case InstrumentEnum.Shares: return "STK";
+        case InstrumentEnum.Options: return "OPT";
         case InstrumentEnum.Futures: return "FUT";
         case InstrumentEnum.Contracts: return "CFD";
         case InstrumentEnum.Currencies: return "CASH";
+        case InstrumentEnum.FuturesOptions: return "FOP";
       }
 
       return null;
@@ -160,6 +170,82 @@ namespace InteractiveBrokers.Mappers
       }
 
       return null;
+    }
+
+    /// <summary>
+    /// Basic order 
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="orderModel"></param>
+    /// <returns></returns>
+    public static Order GetSubOrder(int id, OrderModel orderModel)
+    {
+      var order = new Order();
+
+      order.OrderId = id;
+      order.Action = GetSide(orderModel.Side);
+      order.OrderType = GetOrderType(orderModel.Type);
+      order.TotalQuantity = (decimal)orderModel.Transaction.Volume;
+
+      switch (orderModel.Type)
+      {
+        case OrderTypeEnum.Stop: order.AuxPrice = orderModel.Price.Value; break;
+        case OrderTypeEnum.Limit: order.LmtPrice = orderModel.Price.Value; break;
+        case OrderTypeEnum.StopLimit:
+          order.LmtPrice = orderModel.Price.Value;
+          order.AuxPrice = orderModel.ActivationPrice.Value;
+          break;
+      }
+
+      return order;
+    }
+
+    /// <summary>
+    /// Bracket template
+    /// </summary>
+    /// <param name="order"></param>
+    /// <param name="TP"></param>
+    /// <param name="SL"></param>
+    /// <returns></returns>
+    public static List<Order> GetBraces(Order order, double? stopPrice, double? takePrice)
+    {
+      var orders = new List<Order> { order };
+
+      order.Transmit = false;
+
+      if (takePrice is not null)
+      {
+        var TP = new Order
+        {
+          OrderType = "LMT",
+          OrderId = order.OrderId + 1,
+          Action = order.Action.Equals("BUY") ? "SELL" : "BUY",
+          TotalQuantity = order.TotalQuantity,
+          LmtPrice = takePrice.Value,
+          ParentId = order.OrderId,
+          Transmit = false
+        };
+
+        orders.Add(TP);
+      }
+
+      if (stopPrice is not null)
+      {
+        var SL = new Order
+        {
+          OrderType = "STP",
+          OrderId = order.OrderId + 2,
+          Action = order.Action.Equals("BUY") ? "SELL" : "BUY",
+          TotalQuantity = order.TotalQuantity,
+          AuxPrice = stopPrice.Value,
+          ParentId = order.OrderId,
+          Transmit = true
+        };
+
+        orders.Add(SL);
+      }
+
+      return orders;
     }
   }
 }

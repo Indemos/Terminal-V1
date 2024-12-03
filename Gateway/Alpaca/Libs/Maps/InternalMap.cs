@@ -22,7 +22,8 @@ namespace Alpaca.Mappers
         Bid = (double)message.BidPrice,
         AskSize = (double)message.AskSize,
         BidSize = (double)message.BidSize,
-        Last = (double)message.BidPrice
+        Last = (double)message.BidPrice,
+        TimeFrame = instrument.TimeFrame
       };
 
       point.Instrument = instrument;
@@ -87,43 +88,43 @@ namespace Alpaca.Mappers
 
       var action = new TransactionModel
       {
-        Id = $"{message.OrderId}",
-        Descriptor = message.ClientOrderId,
+        Id = message.ClientOrderId,
         Instrument = instrument,
-        CurrentVolume = (double)message.FilledQuantity,
-        Volume = (double)message.Quantity,
+        CurrentVolume = GetValue(message.FilledQuantity, message.Quantity),
+        Volume = GetValue(message.Quantity, message.FilledQuantity),
         Time = message.CreatedAtUtc,
         Status = GetStatus(message.OrderStatus)
       };
 
-      var inOrder = new OrderModel
+      var order = new OrderModel
       {
         Transaction = action,
         Type = OrderTypeEnum.Market,
         Side = GetOrderSide(message.OrderSide),
-        TimeSpan = GetTimeSpan(message.TimeInForce)
+        TimeSpan = GetTimeSpan(message.TimeInForce),
+        Id = $"{message.OrderId}"
       };
 
       switch (message.OrderType)
       {
         case OrderType.Stop:
-          inOrder.Type = OrderTypeEnum.Stop;
-          inOrder.Price = (double)message.StopPrice;
+          order.Type = OrderTypeEnum.Stop;
+          order.Price = (double)message.StopPrice;
           break;
 
         case OrderType.Limit:
-          inOrder.Type = OrderTypeEnum.Limit;
-          inOrder.Price = (double)message.LimitPrice;
+          order.Type = OrderTypeEnum.Limit;
+          order.Price = (double)message.LimitPrice;
           break;
 
         case OrderType.StopLimit:
-          inOrder.Type = OrderTypeEnum.StopLimit;
-          inOrder.Price = (double)message.StopPrice;
-          inOrder.ActivationPrice = (double)message.LimitPrice;
+          order.Type = OrderTypeEnum.StopLimit;
+          order.Price = (double)message.StopPrice;
+          order.ActivationPrice = (double)message.LimitPrice;
           break;
       }
 
-      return inOrder;
+      return order;
     }
 
     /// <summary>
@@ -133,36 +134,38 @@ namespace Alpaca.Mappers
     /// <returns></returns>
     public static OrderModel GetPosition(IPosition message)
     {
+      var price = (double)message.AssetCurrentPrice;
+      var point = new PointModel
+      {
+        Bid = price,
+        Ask = price,
+        Last = price
+      };
+
       var instrument = new InstrumentModel
       {
-        Name = message.Symbol
+        Name = message.Symbol,
+        Point = point
       };
 
       var action = new TransactionModel
       {
-        Id = $"{message.AssetId}",
-        Descriptor = message.Symbol,
+        Price = price,
         Instrument = instrument,
-        Price = (double)message.AverageEntryPrice,
-        CurrentVolume = (double)message.AvailableQuantity,
-        Volume = (double)message.Quantity
+        Descriptor = $"{message.AssetId}",
+        CurrentVolume = GetValue(message.Quantity, message.AvailableQuantity),
+        Volume = GetValue(message.Quantity, message.AvailableQuantity)
       };
 
       var order = new OrderModel
       {
         Transaction = action,
         Type = OrderTypeEnum.Market,
-        Side = GetPositionSide(message.Side)
+        Side = GetPositionSide(message.Side),
+        Price = (double)message.AverageEntryPrice,
       };
 
-      var gainLossPoints = message.AverageEntryPrice - message.AssetCurrentPrice;
-      var gainLoss = message.CostBasis - message.MarketValue;
-
-      return new OrderModel
-      {
-        GainMax = (double)gainLoss,
-        GainMin = (double)gainLoss
-      };
+      return order;
     }
 
     /// <summary>
@@ -262,5 +265,13 @@ namespace Alpaca.Mappers
 
       return null;
     }
+
+    /// <summary>
+    /// Get value or default
+    /// </summary>
+    /// <param name="price"></param>
+    /// <param name="origin"></param>
+    /// <returns></returns>
+    public static double GetValue(decimal? price, decimal? origin) => (double)(price is 0 or null ? origin : price);
   }
 }

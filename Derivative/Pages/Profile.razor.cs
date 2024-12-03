@@ -50,7 +50,7 @@ namespace Derivative.Pages
           await InvokeAsync(StateHasChanged);
         }
 
-        Groups[caption].ForEach(async o => await Show(o.Value, response));
+        await Task.WhenAll(Groups[caption].Select(async o => await Show(o.Value, response)));
       });
     }
 

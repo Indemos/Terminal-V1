@@ -163,7 +163,7 @@ namespace Derivative.Pages
 
       if (string.Equals(combine, "Yes"))
       {
-        Groups[caption].ForEach(async o => await action(o.Value, options));
+        await Task.WhenAll(Groups[caption].Select(async o => await action(o.Value, options)));
         return;
       }
 
@@ -176,8 +176,7 @@ namespace Derivative.Pages
         .ToDictionary(o => groups.Keys.ElementAt(o), o => null as CanvasView);
 
       await InvokeAsync(StateHasChanged);
-
-      Groups[caption].ForEach(async o => await action(o.Value, groups[o.Key]));
+      await Task.WhenAll(Groups[caption].Select(async o => await action(o.Value, groups[o.Key])));
     }
 
     /// <summary>

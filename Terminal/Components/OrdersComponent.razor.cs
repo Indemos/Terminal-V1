@@ -53,12 +53,13 @@ namespace Terminal.Components
     {
       return new OrderRecord
       {
-        Group = o.Id,
+        Name = o.Name,
+        Type = $"{o.Type}",
         Time = o.Transaction.Time,
-        Name = o.Transaction.Instrument.Name,
+        Group = o.BasisName ?? o.Name,
         Side = o.Side ?? OrderSideEnum.None,
         Size = o.Transaction.CurrentVolume ?? 0,
-        Price = o.Transaction.Price ?? 0,
+        Price = o.Price ?? 0,
       };
     }
   }

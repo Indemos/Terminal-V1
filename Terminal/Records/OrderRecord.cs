@@ -10,6 +10,7 @@ namespace Terminal.Records
   {
     public string Name { get; set; }
     public string Group { get; set; }
+    public string Type { get; set; }
     public double Size { get; set; }
     public double Price { get; set; }
     public DateTime? Time { get; set; }

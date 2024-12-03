@@ -25,7 +25,7 @@ namespace Terminal.Pages.Gateways
     {
       Name = "SPY",
       Exchange = "SMART",
-      Type = InstrumentEnum.Coins,
+      Type = InstrumentEnum.Shares,
       TimeFrame = TimeSpan.FromMinutes(1)
     };
 
@@ -108,7 +108,7 @@ namespace Terminal.Pages.Gateways
         await OpenPositions(Instrument, account.Positions.First().Value.Side is OrderSideEnum.Buy ? -1 : 1);
       }
 
-      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", View.ChartsView.GetShape<BarShape>(point));
+      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", View.ChartsView.GetShape<CandleShape>(point));
       View.ReportsView.UpdateItems(point.Time.Value.Ticks, "Performance", "Balance", new AreaShape { Y = account.Balance });
       View.ReportsView.UpdateItems(point.Time.Value.Ticks, "Performance", "PnL", new LineShape { Y = performance.Point.Last });
       View.DealsView.UpdateItems(account.Deals);
