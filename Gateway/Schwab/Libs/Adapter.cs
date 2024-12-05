@@ -645,35 +645,28 @@ namespace Schwab
     /// <returns></returns>
     protected virtual async Task UpdateToken(string source)
     {
-      try
+      var props = new Dictionary<string, string>
       {
-        var props = new Dictionary<string, string>
-        {
-          ["grant_type"] = "refresh_token",
-          ["refresh_token"] = RefreshToken
-        };
+        ["grant_type"] = "refresh_token",
+        ["refresh_token"] = RefreshToken
+      };
 
-        var uri = new UriBuilder(DataUri + source);
-        var content = new FormUrlEncodedContent(props);
-        var message = new HttpRequestMessage();
-        var basicToken = Encoding.UTF8.GetBytes($"{ClientId}:{ClientSecret}");
+      var uri = new UriBuilder(DataUri + source);
+      var content = new FormUrlEncodedContent(props);
+      var message = new HttpRequestMessage();
+      var basicToken = Encoding.UTF8.GetBytes($"{ClientId}:{ClientSecret}");
 
-        message.Content = content;
-        message.RequestUri = uri.Uri;
-        message.Method = HttpMethod.Post;
-        message.Headers.Add("Authorization", $"Basic {Convert.ToBase64String(basicToken)}");
+      message.Content = content;
+      message.RequestUri = uri.Uri;
+      message.Method = HttpMethod.Post;
+      message.Headers.Add("Authorization", $"Basic {Convert.ToBase64String(basicToken)}");
 
-        var response = await _sender.Send<ScopeMessage>(message, _sender.Options);
+      var response = await _sender.Send<ScopeMessage>(message, _sender.Options);
 
-        if (response.Data is not null)
-        {
-          AccessToken = response.Data.AccessToken;
-          RefreshToken = response.Data.RefreshToken;
-        }
-      }
-      catch (Exception e)
+      if (response.Data is not null)
       {
-        InstanceService<MessageService>.Instance.OnMessage(new MessageModel<string> { Error = e });
+        AccessToken = response.Data.AccessToken;
+        RefreshToken = response.Data.RefreshToken;
       }
     }
 
@@ -686,17 +679,9 @@ namespace Schwab
     protected async Task<ResponseModel<UserDataMessage>> GetUserData()
     {
       var response = new ResponseModel<UserDataMessage>();
+      var userResponse = await SendData<UserDataMessage>($"/trader/v1/userPreference");
 
-      try
-      {
-        var userResponse = await SendData<UserDataMessage>($"/trader/v1/userPreference");
-
-        _userData = response.Data = userResponse.Data;
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
+      _userData = response.Data = userResponse.Data;
 
       return response;
     }
@@ -710,33 +695,26 @@ namespace Schwab
     {
       var inResponse = new ResponseModel<OrderModel>();
 
-      try
+      Account.Orders[order.Id] = order;
+
+      var exOrder = ExternalMap.GetOrder(order);
+      var exResponse = await SendData<OrderMessage>($"/trader/v1/accounts/{_accountCode}/orders", HttpMethod.Post, exOrder);
+
+      inResponse.Data = order;
+
+      if (exResponse.Message.Headers.TryGetValues("Location", out var orderData))
       {
-        Account.Orders[order.Id] = order;
+        var orderItem = orderData.First();
+        var orderId = $"{orderItem[(orderItem.LastIndexOf('/') + 1)..]}";
 
-        var exOrder = ExternalMap.GetOrder(order);
-        var exResponse = await SendData<OrderMessage>($"/trader/v1/accounts/{_accountCode}/orders", HttpMethod.Post, exOrder);
-
-        inResponse.Data = order;
-
-        if (exResponse.Message.Headers.TryGetValues("Location", out var orderData))
+        if (string.IsNullOrEmpty(orderId))
         {
-          var orderItem = orderData.First();
-          var orderId = $"{orderItem[(orderItem.LastIndexOf('/') + 1)..]}";
-
-          if (string.IsNullOrEmpty(orderId))
-          {
-            inResponse.Errors.Add(new ErrorModel { ErrorMessage = $"{exResponse.Message.StatusCode}" });
-            return inResponse;
-          }
-
-          inResponse.Data.Transaction.Id = orderId;
-          inResponse.Data.Transaction.Status = OrderStatusEnum.Filled;
+          inResponse.Errors.Add(new ErrorModel { ErrorMessage = $"{exResponse.Message.StatusCode}" });
+          return inResponse;
         }
-      }
-      catch (Exception e)
-      {
-        inResponse.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+
+        inResponse.Data.Transaction.Id = orderId;
+        inResponse.Data.Transaction.Status = OrderStatusEnum.Filled;
       }
 
       return inResponse;
@@ -750,24 +728,16 @@ namespace Schwab
     protected virtual async Task<ResponseModel<OrderModel>> DeleteOrder(OrderModel order)
     {
       var inResponse = new ResponseModel<OrderModel>();
+      var exResponse = await SendData<OrderMessage>($"/trader/v1/accounts/{_accountCode}/orders/{order.Transaction.Id}", HttpMethod.Delete);
 
-      try
+      if ((int)exResponse.Message.StatusCode >= 400)
       {
-        var exResponse = await SendData<OrderMessage>($"/trader/v1/accounts/{_accountCode}/orders/{order.Transaction.Id}", HttpMethod.Delete);
-
-        if ((int)exResponse.Message.StatusCode >= 400)
-        {
-          inResponse.Errors.Add(new ErrorModel { ErrorMessage = $"{exResponse.Message.StatusCode}" });
-          return inResponse;
-        }
-
-        inResponse.Data = order;
-        inResponse.Data.Transaction.Status = OrderStatusEnum.Canceled;
+        inResponse.Errors.Add(new ErrorModel { ErrorMessage = $"{exResponse.Message.StatusCode}" });
+        return inResponse;
       }
-      catch (Exception e)
-      {
-        inResponse.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-      }
+
+      inResponse.Data = order;
+      inResponse.Data.Transaction.Status = OrderStatusEnum.Canceled;
 
       return inResponse;
     }

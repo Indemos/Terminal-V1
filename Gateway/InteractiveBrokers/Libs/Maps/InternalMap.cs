@@ -1,13 +1,10 @@
 using IBApi;
 using InteractiveBrokers.Messages;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace InteractiveBrokers.Mappers
 {
@@ -18,15 +15,15 @@ namespace InteractiveBrokers.Mappers
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    public static PointModel GetPrice(TickByTickBidAskMessage message)
+    public static PointModel GetPrice(HistoricalTickBidAsk message)
     {
       var point = new PointModel
       {
-        Ask = message.AskPrice,
-        Bid = message.BidPrice,
-        AskSize = (double)message.AskSize,
-        BidSize = (double)message.BidSize,
-        Last = message.BidPrice,
+        Ask = message.PriceAsk,
+        Bid = message.PriceBid,
+        AskSize = (double)message.SizeAsk,
+        BidSize = (double)message.SizeBid,
+        Last = message.PriceBid,
         Time = DateTimeOffset.FromUnixTimeSeconds(message.Time).UtcDateTime
       };
 
@@ -231,40 +228,6 @@ namespace InteractiveBrokers.Mappers
       }
 
       return response;
-    }
-
-    /// <summary>
-    /// Get option contract
-    /// </summary>
-    /// <param name="message"></param>
-    /// <returns></returns>
-    public static IEnumerable<InstrumentModel> GetOptions(SecurityDefinitionOptionParameterMessage message)
-    {
-      var options = message.Expirations.SelectMany(expiration => message.Strikes.Select(strike =>
-      {
-        var point = new PointModel
-        {
-          Ask = 0,
-          Bid = 0,
-          Last = 0
-        };
-
-        var derivative = new DerivativeModel
-        {
-          Strike = strike,
-          Expiration = DateTime.ParseExact(expiration, "yyyyMMdd", CultureInfo.InvariantCulture)
-        };
-
-        var option = new InstrumentModel
-        {
-          Point = point,
-          Derivative = derivative
-        };
-
-        return option;
-      }));
-
-      return options;
     }
   }
 }

@@ -6,9 +6,9 @@ namespace Terminal.Core.Models
   public class  PointScreenerModel
   {
     /// <summary>
-    /// Asset
+    /// Count
     /// </summary>
-    public virtual InstrumentModel Instrument { get; set; }
+    public virtual int? Count { get; set; }
 
     /// <summary>
     /// Start date
@@ -19,5 +19,10 @@ namespace Terminal.Core.Models
     /// End date
     /// </summary>
     public virtual DateTime? MaxDate { get; set; }
+
+    /// <summary>
+    /// Asset
+    /// </summary>
+    public virtual InstrumentModel Instrument { get; set; }
   }
 }

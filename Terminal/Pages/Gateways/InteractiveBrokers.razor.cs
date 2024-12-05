@@ -23,9 +23,9 @@ namespace Terminal.Pages.Gateways
     protected virtual PerformanceIndicator Performance { get; set; }
     protected virtual InstrumentModel Instrument { get; set; } = new InstrumentModel
     {
-      Name = "SPY",
-      Exchange = "SMART",
-      Type = InstrumentEnum.Shares,
+      Id = "495512557",
+      Name = "ES",
+      Type = InstrumentEnum.Futures,
       TimeFrame = TimeSpan.FromMinutes(1)
     };
 
@@ -36,17 +36,13 @@ namespace Terminal.Pages.Gateways
         await CreateViews();
 
         View.OnPreConnect = CreateAccounts;
-        View.OnPostConnect = async () =>
+        View.OnPostConnect = () =>
         {
           var account = View.Adapters["Prime"].Account;
 
           View.DealsView.UpdateItems(account.Deals);
           View.OrdersView.UpdateItems(account.Orders.Values);
           View.PositionsView.UpdateItems(account.Positions.Values);
-
-          var dom = await View.Adapters["Prime"].GetDom(new PointScreenerModel { Instrument = Instrument }, null);
-          Instrument.Point = dom.Data.Asks.First();
-          await OpenPositions(Instrument, 1);
         };
       }
 
@@ -84,7 +80,7 @@ namespace Terminal.Pages.Gateways
         {
           if (Equals(message.Next.Instrument.Name, Instrument.Name))
           {
-            //await OnData(message.Next);
+            await OnData(message.Next);
           }
         });
     }
@@ -97,12 +93,12 @@ namespace Terminal.Pages.Gateways
       var instrument = account.Instruments[Instrument.Name];
       var performance = Performance.Calculate([account]);
 
-      if (account.Orders.Count < 1 && account.Positions.Count < 1)
+      if (account.Orders.IsEmpty && account.Positions.IsEmpty)
       {
         await OpenPositions(Instrument, 1);
       }
 
-      if (Counter is 0 && account.Positions.Count > 0)
+      if (Counter is 0 && account.Positions.IsEmpty is false)
       {
         await ClosePositions();
         await OpenPositions(Instrument, account.Positions.First().Value.Side is OrderSideEnum.Buy ? -1 : 1);

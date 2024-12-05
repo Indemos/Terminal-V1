@@ -553,22 +553,14 @@ namespace Alpaca
     protected virtual async Task<ResponseModel<IList<InstrumentModel>>> GetPageOptions(OptionChainRequest screener)
     {
       var response = new ResponseModel<IList<InstrumentModel>>();
+      var client = _dataClients[InstrumentEnum.Options] as IAlpacaOptionsDataClient;
+      var optionResponse = await client.GetOptionChainAsync(screener);
 
-      try
-      {
-        var client = _dataClients[InstrumentEnum.Options] as IAlpacaOptionsDataClient;
-        var optionResponse = await client.GetOptionChainAsync(screener);
-
-        response.Cursor = optionResponse.NextPageToken;
-        response.Data = optionResponse
-          .Items
-          .Select(option => InternalMap.GetOption(screener, option.Value, option.Key))
-          .ToList();
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
+      response.Cursor = optionResponse.NextPageToken;
+      response.Data = optionResponse
+        .Items
+        .Select(option => InternalMap.GetOption(screener, option.Value, option.Key))
+        .ToList();
 
       return response;
     }

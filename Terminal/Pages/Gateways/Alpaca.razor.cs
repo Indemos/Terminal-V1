@@ -97,12 +97,12 @@ namespace Terminal.Pages.Gateways
       var instrument = account.Instruments[Instrument.Name];
       var performance = Performance.Calculate([account]);
 
-      if (account.Orders.Count < 1 && account.Positions.Count < 1)
+      if (account.Orders.IsEmpty && account.Positions.IsEmpty)
       {
         await OpenPositions(Instrument, 1);
       }
 
-      if (Counter is 0 && account.Positions.Count > 0)
+      if (Counter is 0 && account.Positions.IsEmpty is false)
       {
         await ClosePositions();
         await OpenPositions(Instrument, account.Positions.First().Value.Side is OrderSideEnum.Buy ? -1 : 1);

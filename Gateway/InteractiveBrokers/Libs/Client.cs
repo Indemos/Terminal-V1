@@ -888,15 +888,25 @@ namespace InteractiveBrokers
         ticks.ToList().ForEach(tick => Run(() => cb(new HistoricalTickMessage(reqId, tick.Time, tick.Price, tick.Size)), null));
     }
 
+    public event Action<HistoricalTicksMessage> historicalTicksList;
     public event Action<HistoricalTickBidAskMessage> historicalTickBidAsk;
+    public class HistoricalTicksMessage
+    {
+      public int ReqId { get; set; }
+      public HistoricalTickBidAsk[] Items { get; set; } = [];
+    }
 
     void EWrapper.historicalTicksBidAsk(int reqId, HistoricalTickBidAsk[] ticks, bool done)
     {
       var cb = historicalTickBidAsk;
+      var cbs = historicalTicksList;
 
-      if (cb != null)
-        ticks.ToList().ForEach(tick => Run(() =>
-            cb(new HistoricalTickBidAskMessage(reqId, tick.Time, tick.TickAttribBidAsk, tick.PriceBid, tick.PriceAsk, tick.SizeBid, tick.SizeAsk)), null));
+      if (cbs != null)
+        Run(() => cbs(new HistoricalTicksMessage { ReqId = reqId, Items = ticks }), null);
+
+      //if (cb != null)
+      //  ticks.ToList().ForEach(tick => Run(() =>
+      //      cb(new HistoricalTickBidAskMessage(reqId, tick.Time, tick.TickAttribBidAsk, tick.PriceBid, tick.PriceAsk, tick.SizeBid, tick.SizeAsk)), null));
     }
 
     public event Action<HistoricalTickLastMessage> historicalTickLast;
