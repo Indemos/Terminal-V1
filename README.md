@@ -23,6 +23,7 @@ May contain references to other libraries in [this list](https://github.com/Inde
 
 # Gateways 
 
+* Interactive Brokers
 * Schwab
 * Alpaca
 * Simulation - virtual orders and market data 
