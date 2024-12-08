@@ -102,7 +102,7 @@ namespace Simulation
 
       await Unsubscribe(instrument);
 
-      Account.Instruments[instrument.Name].Points.CollectionChanged += OnPoint;
+      PointStream += OnPoint;
 
       var span = TimeSpan.FromMicroseconds(Speed);
       var points = new Dictionary<string, PointModel>();
@@ -126,7 +126,6 @@ namespace Simulation
           }
 
           point.Instrument = instrument;
-          point.TimeFrame = instrument.TimeFrame;
 
           instrument.Point = point;
           instrument.Points.Add(point);
@@ -170,7 +169,7 @@ namespace Simulation
     {
       var response = new ResponseModel<StatusEnum>();
 
-      Account.Instruments[instrument.Name].Points.CollectionChanged -= OnPoint;
+      PointStream -= OnPoint;
 
       if (_subscriptions.ContainsKey(instrument.Name))
       {
@@ -421,7 +420,7 @@ namespace Simulation
     /// Process pending orders on each quote
     /// </summary>
     /// <param name="message"></param>
-    protected virtual void OnPoint(object sender, NotifyCollectionChangedEventArgs e)
+    protected virtual void OnPoint(MessageModel<PointModel> message)
     {
       var estimates = Account
         .Positions

@@ -80,12 +80,12 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// List of all ticks from the server
     /// </summary>
-    public virtual ObservableGroup<PointModel> Points { get; set; }
+    public virtual ConcurrentGroup<PointModel> Points { get; set; }
 
     /// <summary>
     /// List of all ticks from the server aggregated into bars
     /// </summary>
-    public virtual ObservableGroup<PointModel> PointGroups { get; set; }
+    public virtual ConcurrentGroup<PointModel> PointGroups { get; set; }
 
     /// <summary>
     /// Constructor

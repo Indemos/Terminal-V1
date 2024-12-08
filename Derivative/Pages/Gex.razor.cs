@@ -169,11 +169,10 @@ namespace Derivative.Pages
       var point = new PointModel
       {
         Last = options.Data.Sum(o => Compute(inputModel.Expression, o)),
-        TimeFrame = TimeSpan.FromMinutes(1),
         Time = DateTime.Now
       };
 
-      items.Add(point, point.TimeFrame);
+      items.Add(point, point.Instrument.TimeFrame);
       section.View.Composer.Items = items.Select((o, i) =>
       {
         var item = new CandleShape

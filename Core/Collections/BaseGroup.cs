@@ -1,6 +1,6 @@
 namespace Terminal.Core.Collections
 {
-  public interface IGroup
+  public interface IGroup<T>
   {
     /// <summary>
     /// Group index
@@ -13,6 +13,6 @@ namespace Terminal.Core.Collections
     /// </summary>
     /// <param name="previous"></param>
     /// <returns></returns>
-    IGroup Update(IGroup previous);
+    T Update(T previous);
   }
 }

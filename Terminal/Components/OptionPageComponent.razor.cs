@@ -56,13 +56,7 @@ namespace Terminal.Components
         View.OrdersView.UpdateItems(account.Orders.Values);
         View.PositionsView.UpdateItems(account.Positions.Values);
 
-        account
-          .Instruments
-          .Values
-          .ForEach(o => o.PointGroups.CollectionChanged += (_, e) => e
-            .NewItems
-            .OfType<PointModel>()
-            .ForEach(async o => await action(o)));
+        View.Adapters["Sim"].PointStream += o => action(o.Next);
       };
 
       View.OnDisconnect = () =>

@@ -544,11 +544,10 @@ namespace Schwab
       {
         while (ws.State is WebSocketState.Open)
         {
-          var data = new byte[short.MaxValue];
-
-          await ws.ReceiveAsync(data, cancellation.Token).ContinueWith(async o =>
+          try
           {
-            var response = await o;
+            var data = new byte[short.MaxValue];
+            var streamResponse = await ws.ReceiveAsync(data, cancellation.Token);
             var content = $"{Encoding.Default.GetString(data).Trim(['\0', '[', ']'])}";
             var message = JsonNode.Parse(content);
 
@@ -560,7 +559,12 @@ namespace Schwab
 
               OnPoint(streamPoints.Where(o => InternalMap.GetSubscriptionType(o.Service) is not null));
             }
-          });
+          }
+          catch (Exception e)
+          {
+            Console.WriteLine(e);
+            InstanceService<MessageService>.Instance.OnMessage(new MessageModel<string> { Error = e });
+          }
         }
       });
 
@@ -573,40 +577,34 @@ namespace Schwab
     /// <param name="streamPoints"></param>
     protected virtual void OnPoint(IEnumerable<StreamDataMessage> streamPoints)
     {
-      var scheduler = InstanceService<ScheduleService>.Instance;
-
-      scheduler.Send(() =>
+      foreach (var streamPoint in streamPoints)
       {
-        foreach (var streamPoint in streamPoints)
+        var map = InternalMap.GetStreamMap(streamPoint.Service);
+
+        foreach (var data in streamPoint.Content)
         {
-          var map = InternalMap.GetStreamMap(streamPoint.Service);
+          var point = new PointModel();
+          var instrumentName = $"{data.Get("key")}";
+          var instrument = Account.Instruments.Get(instrumentName) ?? new InstrumentModel();
 
-          foreach (var data in streamPoint.Content)
+          point.Instrument = instrument;
+          point.Bid = double.TryParse($"{data.Get(map.Get("Bid Price"))}", out var x1) ? x1 : null;
+          point.Ask = double.TryParse($"{data.Get(map.Get("Ask Price"))}", out var x2) ? x2 : null;
+          point.BidSize = double.TryParse($"{data.Get(map.Get("Bid Size"))}", out var x3) ? x3 : 0;
+          point.AskSize = double.TryParse($"{data.Get(map.Get("Ask Size"))}", out var x4) ? x4 : 0;
+          point.Last = double.TryParse($"{data.Get(map.Get("Last Price"))}", out var x5) ? x5 : (point.Bid ?? point.Ask);
+
+          instrument.Name = instrumentName;
+          instrument.Point = point;
+          instrument.Points.Add(point);
+          instrument.PointGroups.Add(point, instrument.TimeFrame);
+
+          PointStream(new MessageModel<PointModel>
           {
-            var point = new PointModel();
-            var instrumentName = $"{data.Get("key")}";
-            var instrument = Account.Instruments.Get(instrumentName) ?? new InstrumentModel();
-
-            point.Instrument = instrument;
-            point.Bid = double.TryParse($"{data.Get(map.Get("Bid Price"))}", out var x1) ? x1 : null;
-            point.Ask = double.TryParse($"{data.Get(map.Get("Ask Price"))}", out var x2) ? x2 : null;
-            point.BidSize = double.TryParse($"{data.Get(map.Get("Bid Size"))}", out var x3) ? x3 : null;
-            point.AskSize = double.TryParse($"{data.Get(map.Get("Ask Size"))}", out var x4) ? x4 : null;
-            point.Last = double.TryParse($"{data.Get(map.Get("Last Price"))}", out var x5) ? x5 : (point.Bid ?? point.Ask);
-            point.TimeFrame = instrument.TimeFrame;
-
-            instrument.Name = instrumentName;
-            instrument.Point = point;
-            instrument.Points.Add(point);
-            instrument.PointGroups.Add(point, instrument.TimeFrame);
-
-            PointStream(new MessageModel<PointModel>
-            {
-              Next = instrument.PointGroups.Last()
-            });
-          }
+            Next = instrument.PointGroups.Last()
+          });
         }
-      });
+      }
     }
 
     /// <summary>

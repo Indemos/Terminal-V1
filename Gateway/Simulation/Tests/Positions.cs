@@ -213,7 +213,7 @@ namespace Terminal.Tests
 
       Assert.Equal(balance, 50000);
 
-      base.OnPoint(null, null);
+      base.OnPoint(null);
 
       Assert.Single(Account.Deals);
       Assert.Empty(Account.Orders);

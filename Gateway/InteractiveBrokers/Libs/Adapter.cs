@@ -124,7 +124,6 @@ namespace InteractiveBrokers
         SubscribeToPoints(id, instrument, point =>
         {
           point.Time ??= DateTime.Now;
-          point.TimeFrame ??= instrument.TimeFrame;
 
           instrument.Points.Add(point);
           instrument.PointGroups.Add(point, instrument.TimeFrame);
@@ -569,7 +568,6 @@ namespace InteractiveBrokers
           }
 
           point.Time = DateTime.Now;
-          point.TimeFrame = instrument.TimeFrame;
           point.Instrument = instrument;
           action(point.Clone() as PointModel);
         }

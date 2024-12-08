@@ -6,7 +6,7 @@ using Terminal.Core.Extensions;
 
 namespace Terminal.Core.Models
 {
-  public class PointModel : ICloneable, IGroup
+  public class PointModel : ICloneable, IGroup<PointModel>
   {
     /// <summary>
     /// Bid
@@ -42,11 +42,6 @@ namespace Terminal.Core.Models
     /// Time stamp
     /// </summary>
     public virtual DateTime? Time { get; set; }
-
-    /// <summary>
-    /// Aggregation period for the quotes
-    /// </summary>
-    public virtual TimeSpan? TimeFrame { get; set; }
 
     /// <summary>
     /// Reference to the complex data point
@@ -102,9 +97,9 @@ namespace Terminal.Core.Models
     /// <returns></returns>
     public virtual long GetIndex()
     {
-      if (TimeFrame is not null)
+      if (Instrument.TimeFrame is not null)
       {
-        return Time.Round(TimeFrame).Value.Ticks;
+        return Time.Round(Instrument.TimeFrame).Value.Ticks;
       }
 
       return Time.Value.Ticks;
@@ -115,22 +110,20 @@ namespace Terminal.Core.Models
     /// </summary>
     /// <param name="previous"></param>
     /// <returns></returns>
-    public virtual IGroup Update(IGroup previous)
+    public virtual PointModel Update(PointModel previous)
     {
-      var o = previous as PointModel;
-      var price = (Last ?? Bid ?? Ask ?? o?.Last ?? o?.Bid ?? o?.Ask).Value;
+      var price = (Last ?? Bid ?? Ask ?? previous?.Last ?? previous?.Bid ?? previous?.Ask).Value;
 
-      Ask ??= o?.Ask ?? price;
-      Bid ??= o?.Bid ?? price;
-      AskSize += o?.AskSize ?? 0.0;
-      BidSize += o?.BidSize ?? 0.0;
-      TimeFrame ??= o?.TimeFrame;
-      Time = Time.Round(TimeFrame) ?? o?.Time;
+      Ask ??= previous?.Ask ?? price;
+      Bid ??= previous?.Bid ?? price;
+      AskSize += previous?.AskSize ?? 0.0;
+      BidSize += previous?.BidSize ?? 0.0;
+      Time = Time.Round(Instrument.TimeFrame) ?? previous?.Time;
       Bar ??= new BarModel();
       Bar.Close = Last = price;
-      Bar.Open = o?.Bar?.Open ?? Bar.Open ?? price;
-      Bar.Low = Math.Min(Bar.Low ?? price, o?.Bar?.Low ?? price);
-      Bar.High = Math.Max(Bar.High ?? price, o?.Bar?.High ?? price);
+      Bar.Open = previous?.Bar?.Open ?? Bar.Open ?? price;
+      Bar.Low = Math.Min(Bid ?? price, previous?.Bar?.Low ?? price);
+      Bar.High = Math.Max(Ask ?? price, previous?.Bar?.High ?? price);
 
       return this;
     }

@@ -22,8 +22,7 @@ namespace Alpaca.Mappers
         Bid = (double)message.BidPrice,
         AskSize = (double)message.AskSize,
         BidSize = (double)message.BidSize,
-        Last = (double)message.BidPrice,
-        TimeFrame = instrument.TimeFrame
+        Last = (double)message.BidPrice
       };
 
       point.Instrument = instrument;
