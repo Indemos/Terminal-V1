@@ -121,9 +121,9 @@ namespace Terminal.Core.Models
       Time = Time.Round(Instrument.TimeFrame) ?? previous?.Time;
       Bar ??= new BarModel();
       Bar.Close = Last = price;
-      Bar.Open = previous?.Bar?.Open ?? Bar.Open ?? price;
-      Bar.Low = Math.Min(Bid ?? price, previous?.Bar?.Low ?? price);
-      Bar.High = Math.Max(Ask ?? price, previous?.Bar?.High ?? price);
+      Bar.Open = Bar.Open ?? previous?.Bar?.Open ?? price;
+      Bar.Low = Math.Min(Bar?.Low ?? Bid.Value, previous?.Bar?.Low ?? price);
+      Bar.High = Math.Max(Bar?.High ?? Ask.Value, previous?.Bar?.High ?? price);
 
       return this;
     }

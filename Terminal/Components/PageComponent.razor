@@ -27,92 +27,62 @@
 
   <MudExpansionPanels MultiExpansion="true">
 
-    @if (View1 is not null)
+    @if (FramesView is not null)
     {
       <MudExpansionPanel>
         <TitleContent>
           <div class="d-flex">
             <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
-            <MudText>@Header1</MudText>
+            <MudText>Frames</MudText>
           </div>
         </TitleContent>
         <ChildContent>
-          @View1
+          @FramesView
         </ChildContent>
       </MudExpansionPanel>
     }
 
-    @if (View2 is not null)
+    @if (EstimatesView is not null)
     {
       <MudExpansionPanel>
         <TitleContent>
           <div class="d-flex">
             <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
-            <MudText>@Header2</MudText>
+            <MudText>Estimates</MudText>
           </div>
         </TitleContent>
         <ChildContent>
-          @View2
+          @EstimatesView
         </ChildContent>
       </MudExpansionPanel>
     }
 
-    @if (View3 is not null)
+    @if (PositionsMetricsView is not null)
     {
       <MudExpansionPanel>
         <TitleContent>
           <div class="d-flex">
             <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
-            <MudText>@Header3</MudText>
+            <MudText>Position Metrics</MudText>
           </div>
         </TitleContent>
         <ChildContent>
-          @View3
+          @PositionsMetricsView
         </ChildContent>
       </MudExpansionPanel>
     }
 
-    @if (View4 is not null)
+    @if (StrikesView is not null)
     {
       <MudExpansionPanel>
         <TitleContent>
           <div class="d-flex">
             <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
-            <MudText>@Header4</MudText>
+            <MudText>Strikes</MudText>
           </div>
         </TitleContent>
         <ChildContent>
-          @View4
-        </ChildContent>
-      </MudExpansionPanel>
-    }
-
-    @if (View5 is not null)
-    {
-      <MudExpansionPanel>
-        <TitleContent>
-          <div class="d-flex">
-            <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
-            <MudText>@Header5</MudText>
-          </div>
-        </TitleContent>
-        <ChildContent>
-          @View5
-        </ChildContent>
-      </MudExpansionPanel>
-    }
-
-    @if (View6 is not null)
-    {
-      <MudExpansionPanel>
-        <TitleContent>
-          <div class="d-flex">
-            <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
-            <MudText>@Header6</MudText>
-          </div>
-        </TitleContent>
-        <ChildContent>
-          @View6
+          @StrikesView
         </ChildContent>
       </MudExpansionPanel>
     }

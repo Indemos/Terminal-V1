@@ -75,9 +75,9 @@ namespace Terminal.Components
     public virtual async Task CreateViews(params string[] groups)
     {
       await View.ReportsView.Create("Performance");
-      await View.ChartsView.Create([.. groups, "Volume", "Delta", "Gamma", "Vega", "Theta", "Puts", "Calls", "Ratios"]);
+      await View.ChartsView.Create([.. groups, "Volume", "Delta", "Vega", "Theta", "Ratios"]);
       await PositionsView.Create("Assets", "Volume", "Delta", "Gamma", "Vega", "Iv", "Theta");
-      await StrikesView.Create("Gamma", "Theta", "Volume", "OI", "Puts", "Calls", "Ratios");
+      await StrikesView.Create("Gamma", "Theta", "Volume", "OI", "Ratios");
       await PremiumsView.Create("Estimates");
       await FramesView.Create("Prices");
     }
@@ -131,16 +131,10 @@ namespace Terminal.Components
 
       FramesView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", View.ReportsView.GetShape<CandleShape>(point));
 
-      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Volume", "CallVolume", new AreaShape { Y = calls.Sum(o => o.Point.Volume), Component = comUp });
-      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Volume", "PutVolume", new AreaShape { Y = -puts.Sum(o => o.Point.Volume), Component = comDown });
+      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Volume", "CallPutVolume", new AreaShape { Y = calls.Sum(o => o.Point.Volume) - puts.Sum(o => o.Point.Volume), Component = com });
       View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Delta", "CallPutDelta", new AreaShape { Y = calls.Sum(o => o.Derivative.Variable.Delta) + puts.Sum(o => o.Derivative.Variable.Delta), Component = com });
-      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Gamma", "CallPutGamma", new AreaShape { Y = calls.Sum(o => o.Derivative.Variable.Gamma) - puts.Sum(o => o.Derivative.Variable.Gamma), Component = com });
-      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Vega", "CallVega", new AreaShape { Y = calls.Sum(o => o.Derivative.Variable.Vega), Component = comUp });
-      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Vega", "PutVega", new AreaShape { Y = -puts.Sum(o => o.Derivative.Variable.Vega), Component = comDown });
-      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Theta", "CallTheta", new AreaShape { Y = calls.Sum(o => o.Derivative.Variable.Theta), Component = comUp });
-      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Theta", "PutTheta", new AreaShape { Y = -puts.Sum(o => o.Derivative.Variable.Theta), Component = comDown });
-      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Puts", "PutBidsAsks", new AreaShape { Y = putBids - putAsks, Component = com });
-      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Calls", "CallBidsAsks", new AreaShape { Y = callBids - callAsks, Component = com });
+      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Vega", "CallPutVega", new AreaShape { Y = calls.Sum(o => o.Derivative.Variable.Vega) - puts.Sum(o => o.Derivative.Variable.Vega), Component = com });
+      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Theta", "CallPutTheta", new AreaShape { Y = calls.Sum(o => o.Derivative.Variable.Theta) - puts.Sum(o => o.Derivative.Variable.Theta), Component = com });
       View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Ratios", "CallPutDomRatio", new AreaShape { Y = (callBids - callAsks) - (putBids - putAsks), Component = com });
 
       var performance = Performance.Calculate([account]);
@@ -282,16 +276,6 @@ namespace Terminal.Components
         var putAsks = puts.Sum(o => o?.Point?.Ask ?? 0);
         var callBids = calls.Sum(o => o?.Point?.Bid ?? 0);
         var callAsks = calls.Sum(o => o?.Point?.Ask ?? 0);
-
-        shape.Groups["Puts"] = new Shape();
-        shape.Groups["Puts"].Groups = new Dictionary<string, IShape>();
-        shape.Groups["Puts"].Groups["PutBids"] = new BarShape { X = group.Key, Y = -putBids, Component = new ComponentModel { Color = SKColors.OrangeRed } };
-        shape.Groups["Puts"].Groups["PutAsks"] = new BarShape { X = group.Key, Y = putAsks, Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-
-        shape.Groups["Calls"] = new Shape();
-        shape.Groups["Calls"].Groups = new Dictionary<string, IShape>();
-        shape.Groups["Calls"].Groups["CallBids"] = new BarShape { X = group.Key, Y = callBids, Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-        shape.Groups["Calls"].Groups["CallAsks"] = new BarShape { X = group.Key, Y = -callAsks, Component = new ComponentModel { Color = SKColors.OrangeRed } };
 
         shape.Groups["Ratios"] = new Shape();
         shape.Groups["Ratios"].Groups = new Dictionary<string, IShape>();

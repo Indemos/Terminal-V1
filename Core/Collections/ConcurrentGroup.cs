@@ -41,7 +41,7 @@ namespace Terminal.Core.Collections
 
         _groups[index] = Count;
 
-        Add(item.Update(this.LastOrDefault()));
+        Add(item.Update(null));
       }
     }
   }
