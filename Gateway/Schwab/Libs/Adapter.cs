@@ -566,7 +566,6 @@ namespace Schwab
           }
           catch (Exception e)
           {
-            Console.WriteLine(e);
             InstanceService<MessageService>.Instance.OnMessage(new MessageModel<string> { Error = e });
           }
         }

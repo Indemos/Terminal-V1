@@ -129,14 +129,6 @@ namespace Terminal.Core.Models
       Bar.High = Math.Max(Bar?.High ?? price, o?.Bar?.High ?? previousPrice ?? price);
       Time = Time.Round(Instrument.TimeFrame) ?? o?.Time;
 
-      Console.WriteLine(
-        "### PREVIOUS ### : " +
-        o?.Ask + " / " + o?.Bid + " : " + o?.Bar?.Open + " / " + o?.Bar?.High + " / " + o?.Bar?.Low + " / " + o?.Bar?.Close);
-
-      Console.WriteLine(
-        Instrument.Name + " : " +
-        Ask  + " / " + Bid + " : " + Bar.Open + " / " + Bar.High + " / " + Bar.Low + " / " + Bar.Close);
-
       return this;
     }
   }
