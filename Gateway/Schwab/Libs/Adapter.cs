@@ -5,6 +5,7 @@ using Schwab.Mappers;
 using Schwab.Messages;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -533,6 +534,9 @@ namespace Schwab
 
       var adminResponse = await ReceiveStream<StreamLoginResponseMessage>(ws);
       var adminCode = adminResponse?.Response?.FirstOrDefault()?.Content?.Code;
+      var pointMap = Account
+        .Instruments
+        .ToDictionary(o => o.Key, o => new PointModel());
 
       if (adminCode is not 0)
       {
@@ -557,7 +561,7 @@ namespace Schwab
                 .AsArray()
                 .Select(o => o.Deserialize<StreamDataMessage>());
 
-              OnPoint(streamPoints.Where(o => InternalMap.GetSubscriptionType(o.Service) is not null));
+              OnPoint(pointMap, streamPoints.Where(o => InternalMap.GetSubscriptionType(o.Service) is not null));
             }
           }
           catch (Exception e)
@@ -574,8 +578,9 @@ namespace Schwab
     /// <summary>
     /// Process quote from the stream
     /// </summary>
+    /// <param name="pointMap"></param>
     /// <param name="streamPoints"></param>
-    protected virtual void OnPoint(IEnumerable<StreamDataMessage> streamPoints)
+    protected virtual void OnPoint(IDictionary<string, PointModel> pointMap, IEnumerable<StreamDataMessage> streamPoints)
     {
       foreach (var streamPoint in streamPoints)
       {
@@ -583,16 +588,22 @@ namespace Schwab
 
         foreach (var data in streamPoint.Content)
         {
-          var point = new PointModel();
           var instrumentName = $"{data.Get("key")}";
-          var instrument = Account.Instruments.Get(instrumentName) ?? new InstrumentModel();
+          var instrument = Account.Instruments.Get(instrumentName);
+          var point = pointMap.Get(instrumentName);
 
+          point.Time = DateTime.Now;
           point.Instrument = instrument;
-          point.Bid = double.TryParse($"{data.Get(map.Get("Bid Price"))}", out var x1) ? x1 : null;
-          point.Ask = double.TryParse($"{data.Get(map.Get("Ask Price"))}", out var x2) ? x2 : null;
-          point.BidSize = double.TryParse($"{data.Get(map.Get("Bid Size"))}", out var x3) ? x3 : 0;
-          point.AskSize = double.TryParse($"{data.Get(map.Get("Ask Size"))}", out var x4) ? x4 : 0;
-          point.Last = double.TryParse($"{data.Get(map.Get("Last Price"))}", out var x5) ? x5 : (point.Bid ?? point.Ask);
+          point.Bid = InternalMap.GetValue($"{data.Get(map.Get("Bid Price"))}", point.Bid);
+          point.Ask = InternalMap.GetValue($"{data.Get(map.Get("Ask Price"))}", point.Ask);
+          point.BidSize = InternalMap.GetValue($"{data.Get(map.Get("Bid Size"))}", point.BidSize);
+          point.AskSize = InternalMap.GetValue($"{data.Get(map.Get("Ask Size"))}", point.AskSize);
+          point.Last = InternalMap.GetValue($"{data.Get(map.Get("Last Price"))}", point.Last);
+
+          if (point.Bid is null || point.Ask is null || point.BidSize is null || point.AskSize is null)
+          {
+            return;
+          }
 
           instrument.Name = instrumentName;
           instrument.Point = point;

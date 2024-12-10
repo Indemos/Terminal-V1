@@ -127,7 +127,6 @@ namespace Terminal.Components
       View.Update(domain, Shapes);
     }
 
-
     /// <summary>
     /// Update
     /// </summary>

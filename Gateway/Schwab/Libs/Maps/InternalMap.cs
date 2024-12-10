@@ -5,6 +5,7 @@ using System.Linq;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Schwab.Mappers
 {
@@ -465,9 +466,17 @@ namespace Schwab.Mappers
     /// <summary>
     /// Get value or default
     /// </summary>
-    /// <param name="price"></param>
+    /// <param name="v"></param>
     /// <param name="origin"></param>
     /// <returns></returns>
-    public static double GetValue(double? price, double? origin) => (price is 0 or null ? origin : price).Value;
+    public static double? GetValue(double? v, double? origin) => v is 0 or null ? origin : v;
+
+    /// <summary>
+    /// Get value or default
+    /// </summary>
+    /// <param name="v"></param>
+    /// <param name="origin"></param>
+    /// <returns></returns>
+    public static double? GetValue(string v, double? origin) => double.TryParse(v, out var o) ? o : origin;
   }
 }

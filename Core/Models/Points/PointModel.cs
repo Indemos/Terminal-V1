@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Text.Json;
 using Terminal.Core.Collections;
 using Terminal.Core.Domains;
 using Terminal.Core.Extensions;
@@ -108,22 +110,28 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Grouping implementation
     /// </summary>
-    /// <param name="previous"></param>
+    /// <param name="o"></param>
     /// <returns></returns>
-    public virtual PointModel Update(PointModel previous)
+    public virtual PointModel Update(PointModel o)
     {
-      var price = (Last ?? Bid ?? Ask ?? previous?.Last ?? previous?.Bid ?? previous?.Ask).Value;
+      var price = (Last ?? Bid ?? Ask ?? o?.Last ?? o?.Bid ?? o?.Ask).Value;
 
-      Ask ??= previous?.Ask ?? price;
-      Bid ??= previous?.Bid ?? price;
-      AskSize += previous?.AskSize ?? 0.0;
-      BidSize += previous?.BidSize ?? 0.0;
-      Time = Time.Round(Instrument.TimeFrame) ?? previous?.Time;
+      Ask ??= o?.Ask ?? price;
+      Bid ??= o?.Bid ?? price;
+      AskSize += o?.AskSize ?? 0.0;
+      BidSize += o?.BidSize ?? 0.0;
+      Time = Time.Round(Instrument.TimeFrame) ?? o?.Time;
       Bar ??= new BarModel();
       Bar.Close = Last = price;
-      Bar.Open = Bar.Open ?? previous?.Bar?.Open ?? price;
-      Bar.Low = Math.Min(Bar?.Low ?? Bid.Value, previous?.Bar?.Low ?? price);
-      Bar.High = Math.Max(Bar?.High ?? Ask.Value, previous?.Bar?.High ?? price);
+      Bar.Open = Bar.Open ?? o?.Bar?.Open ?? price;
+      Bar.Low = Math.Min(Bar?.Low ?? price, o?.Bar?.Low ?? price);
+      Bar.High = Math.Max(Bar?.High ?? price, o?.Bar?.High ?? price);
+
+      Console.WriteLine(
+        Instrument.Name + " : " +
+        Time + " : " + 
+        Ask  + " / " + Bid + " / " + AskSize + " / " + BidSize + " : " +
+        Bar.Open + " / " + Bar.High + " / " + Bar.Low + " / " + Bar.Close);
 
       return this;
     }

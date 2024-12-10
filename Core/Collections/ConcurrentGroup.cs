@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Terminal.Core.Collections
 {
-  public class ConcurrentGroup<T> : SynchronizedCollection<T> where T : class, IGroup<T>
+  public class ConcurrentGroup<T> : SynchronizedCollection<T> where T : class, ICloneable, IGroup<T>
   {
     private object _sync;
 
@@ -35,13 +34,13 @@ namespace Terminal.Core.Collections
 
         if (_groups.TryGetValue(index, out var position))
         {
-          this[position] = item.Update(this[position]);
+          this[position] = (item.Clone() as T).Update(this[position]);
           return;
         }
 
         _groups[index] = Count;
 
-        Add(item.Update(null));
+        Add((item.Clone() as T).Update(null));
       }
     }
   }

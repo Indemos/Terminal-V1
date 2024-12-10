@@ -7,11 +7,14 @@ namespace InteractiveBrokers.Messages
 {
   public class TickGenericMessage : MarketDataMessage
   {
-    public TickGenericMessage(int requestId, int field, double price) : base(requestId, field)
+    public TickGenericMessage(int requestId, int field, double? price) : base(requestId, field)
     {
-      Value = price;
+      Data = price;
+      Value = price.GetValueOrDefault();
     }
 
     public double Value { get; set; }
+
+    public double? Data { get; set; }
   }
 }

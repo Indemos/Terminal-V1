@@ -124,6 +124,7 @@ namespace InteractiveBrokers
         SubscribeToPoints(id, instrument, point =>
         {
           point.Time ??= DateTime.Now;
+          point.Instrument = instrument;
 
           instrument.Points.Add(point);
           instrument.PointGroups.Add(point, instrument.TimeFrame);
@@ -556,10 +557,10 @@ namespace InteractiveBrokers
         {
           switch (ExternalMap.GetField(message.Field))
           {
-            case FieldCodeEnum.BidSize: point.BidSize = message.Value; break;
-            case FieldCodeEnum.AskSize: point.AskSize = message.Value; break;
-            case FieldCodeEnum.BidPrice: point.Last = point.Bid = message.Value; break;
-            case FieldCodeEnum.AskPrice: point.Last = point.Ask = message.Value; break;
+            case FieldCodeEnum.BidSize: point.BidSize = message.Data ?? point.BidSize; break;
+            case FieldCodeEnum.AskSize: point.AskSize = message.Data ?? point.AskSize; break;
+            case FieldCodeEnum.BidPrice: point.Last = point.Bid = message.Data ?? point.Bid; break;
+            case FieldCodeEnum.AskPrice: point.Last = point.Ask = message.Data ?? point.Ask; break;
           }
 
           if (point.Bid is null || point.Ask is null || point.BidSize is null || point.AskSize is null)
@@ -569,7 +570,7 @@ namespace InteractiveBrokers
 
           point.Time = DateTime.Now;
           point.Instrument = instrument;
-          action(point.Clone() as PointModel);
+          action(point);
         }
       }
 
@@ -577,8 +578,6 @@ namespace InteractiveBrokers
 
       _client.TickPrice += subscribe;
       _client.ClientSocket.reqMktData(id, contract, string.Empty, false, false, null);
-
-      action(point.Clone() as PointModel);
     }
 
     /// <summary>
