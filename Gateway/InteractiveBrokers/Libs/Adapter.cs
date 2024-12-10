@@ -7,6 +7,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
@@ -439,9 +440,9 @@ namespace InteractiveBrokers
         .Where(o => Account.Instruments.ContainsKey(o.Name) is false)
         .ForEach(o => Account.Instruments[o.Name] = o.Transaction.Instrument);
 
-      foreach (var instrument in Account.Instruments)
+      foreach (var instrument in Account.Instruments.Values)
       {
-        _contracts[instrument.Key] = (await GetContract(instrument.Value, 10)).Data;
+        _contracts[instrument.Name] = (await GetContract(instrument, 10)).Data ?? ExternalMap.GetContract(instrument);
       }
 
       response.Data = Account;
@@ -559,11 +560,12 @@ namespace InteractiveBrokers
           {
             case FieldCodeEnum.BidSize: point.BidSize = message.Data ?? point.BidSize; break;
             case FieldCodeEnum.AskSize: point.AskSize = message.Data ?? point.AskSize; break;
-            case FieldCodeEnum.BidPrice: point.Last = point.Bid = message.Data ?? point.Bid; break;
-            case FieldCodeEnum.AskPrice: point.Last = point.Ask = message.Data ?? point.Ask; break;
+            case FieldCodeEnum.BidPrice: point.Bid = message.Data ?? point.Bid; break;
+            case FieldCodeEnum.AskPrice: point.Ask = message.Data ?? point.Ask; break;
+            case FieldCodeEnum.LastPrice: point.Last = message.Data ?? point.Last; break;
           }
 
-          if (point.Bid is null || point.Ask is null || point.BidSize is null || point.AskSize is null)
+          if (point.Bid is null || point.Ask is null || point.Last is null)
           {
             return;
           }
@@ -665,7 +667,7 @@ namespace InteractiveBrokers
       reader.Start();
       response.Data = reader;
 
-      //while (_client.NextOrderId <= 0) ;
+      while (_client.NextOrderId <= 0) ;
 
       return Task.FromResult(response);
     }

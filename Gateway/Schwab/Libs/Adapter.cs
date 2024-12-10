@@ -600,7 +600,7 @@ namespace Schwab
           point.AskSize = InternalMap.GetValue($"{data.Get(map.Get("Ask Size"))}", point.AskSize);
           point.Last = InternalMap.GetValue($"{data.Get(map.Get("Last Price"))}", point.Last);
 
-          if (point.Bid is null || point.Ask is null || point.BidSize is null || point.AskSize is null)
+          if (point.Bid is null || point.Ask is null || point.Last is null)
           {
             return;
           }

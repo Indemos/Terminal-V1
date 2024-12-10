@@ -114,24 +114,28 @@ namespace Terminal.Core.Models
     /// <returns></returns>
     public virtual PointModel Update(PointModel o)
     {
-      var price = (Last ?? Bid ?? Ask ?? o?.Last ?? o?.Bid ?? o?.Ask).Value;
+      var currentPrice = Last;
+      var previousPrice = o?.Last;
+      var price = (currentPrice ?? previousPrice).Value;
 
       Ask ??= o?.Ask ?? price;
       Bid ??= o?.Bid ?? price;
       AskSize += o?.AskSize ?? 0.0;
       BidSize += o?.BidSize ?? 0.0;
-      Time = Time.Round(Instrument.TimeFrame) ?? o?.Time;
       Bar ??= new BarModel();
       Bar.Close = Last = price;
       Bar.Open = Bar.Open ?? o?.Bar?.Open ?? price;
-      Bar.Low = Math.Min(Bar?.Low ?? price, o?.Bar?.Low ?? price);
-      Bar.High = Math.Max(Bar?.High ?? price, o?.Bar?.High ?? price);
+      Bar.Low = Math.Min(Bar?.Low ?? price, o?.Bar?.Low ?? previousPrice ?? price);
+      Bar.High = Math.Max(Bar?.High ?? price, o?.Bar?.High ?? previousPrice ?? price);
+      Time = Time.Round(Instrument.TimeFrame) ?? o?.Time;
+
+      Console.WriteLine(
+        "### PREVIOUS ### : " +
+        o?.Ask + " / " + o?.Bid + " : " + o?.Bar?.Open + " / " + o?.Bar?.High + " / " + o?.Bar?.Low + " / " + o?.Bar?.Close);
 
       Console.WriteLine(
         Instrument.Name + " : " +
-        Time + " : " + 
-        Ask  + " / " + Bid + " / " + AskSize + " / " + BidSize + " : " +
-        Bar.Open + " / " + Bar.High + " / " + Bar.Low + " / " + Bar.Close);
+        Ask  + " / " + Bid + " : " + Bar.Open + " / " + Bar.High + " / " + Bar.Low + " / " + Bar.Close);
 
       return this;
     }
