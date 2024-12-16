@@ -1,7 +1,7 @@
 using Canvas.Core.Shapes;
+using InteractiveBrokers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
-using InteractiveBrokers;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
@@ -11,6 +11,7 @@ using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
+using Terminal.Services;
 
 namespace Terminal.Pages.Gateways
 {
@@ -18,9 +19,8 @@ namespace Terminal.Pages.Gateways
   {
     [Inject] IConfiguration Configuration { get; set; }
 
-    protected virtual int Counter { get; set; }
-    protected virtual PageComponent View { get; set; }
-    protected virtual PerformanceIndicator Performance { get; set; }
+    protected PageComponent View { get; set; }
+    protected PerformanceIndicator Performance { get; set; }
     protected virtual InstrumentModel Instrument { get; set; } = new InstrumentModel
     {
       Id = "495512557",
@@ -85,23 +85,30 @@ namespace Terminal.Pages.Gateways
         });
     }
 
-    private async Task OnData(PointModel point)
+    protected async Task OnData(PointModel point)
     {
-      Counter = (Counter + 1) % 100;
-
+      var name = Instrument.Name;
       var account = View.Adapters["Prime"].Account;
-      var instrument = account.Instruments[Instrument.Name];
+      var instrument = account.Instruments[name];
       var performance = Performance.Calculate([account]);
+      var openOrders = account.Orders.Values.Where(o => Equals(o.Name, name));
+      var openPositions = account.Positions.Values.Where(o => Equals(o.Name, name));
 
-      if (account.Orders.IsEmpty && account.Positions.IsEmpty)
+      if (openOrders.IsEmpty() && openPositions.IsEmpty())
       {
         await OpenPositions(Instrument, 1);
-      }
+        await TradeService.Done(async () =>
+        {
+          var position = account
+            .Positions
+            .Values
+            .Where(o => Equals(o.Name, name))
+            .First();
 
-      if (Counter is 0 && account.Positions.IsEmpty is false)
-      {
-        await ClosePositions();
-        await OpenPositions(Instrument, account.Positions.First().Value.Side is OrderSideEnum.Buy ? -1 : 1);
+          await ClosePositions(name);
+          await OpenPositions(Instrument, position.Side is OrderSideEnum.Buy ? -1 : 1);
+
+        }, 10000);
       }
 
       View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", View.ChartsView.GetShape<BarShape>(point));
@@ -112,39 +119,32 @@ namespace Terminal.Pages.Gateways
       View.PositionsView.UpdateItems(account.Positions.Values);
     }
 
-    private double? GetPrice(double direction) => direction > 0 ?
+    protected double? GetPrice(double direction) => direction > 0 ?
       Instrument.Point.Ask :
       Instrument.Point.Bid;
 
-    private async Task OpenPositions(InstrumentModel instrument, double direction)
+    protected async Task OpenPositions(InstrumentModel instrument, double direction)
     {
+      var adapter = View.Adapters["Prime"];
       var side = direction > 0 ? OrderSideEnum.Buy : OrderSideEnum.Sell;
       var stopSide = direction < 0 ? OrderSideEnum.Buy : OrderSideEnum.Sell;
-      var adapter = View.Adapters["Prime"];
+
       var TP = new OrderModel
       {
-        Price = GetPrice(direction) + 15 * direction,
         Side = stopSide,
         Type = OrderTypeEnum.Limit,
         Instruction = InstructionEnum.Brace,
-        Transaction = new()
-        {
-          Volume = 1,
-          Instrument = instrument
-        }
+        Price = GetPrice(direction) + 15 * direction,
+        Transaction = new() { Volume = 1, Instrument = instrument }
       };
 
       var SL = new OrderModel
       {
-        Price = GetPrice(-direction) - 15 * direction,
         Side = stopSide,
         Type = OrderTypeEnum.Stop,
         Instruction = InstructionEnum.Brace,
-        Transaction = new()
-        {
-          Volume = 1,
-          Instrument = instrument
-        }
+        Price = GetPrice(-direction) - 15 * direction,
+        Transaction = new() { Volume = 1, Instrument = instrument }
       };
 
       var order = new OrderModel
@@ -152,32 +152,28 @@ namespace Terminal.Pages.Gateways
         Price = GetPrice(direction),
         Side = side,
         Type = OrderTypeEnum.Market,
-        Orders = [SL, TP],
-        Transaction = new()
-        {
-          Volume = 1,
-          Instrument = instrument
-        }
+        Transaction = new() { Volume = 1, Instrument = instrument },
+        Orders = [SL, TP]
       };
 
       await adapter.CreateOrders(order);
     }
 
-    private async Task ClosePositions()
+    protected async Task ClosePositions(string name)
     {
       var adapter = View.Adapters["Prime"];
 
-      foreach (var position in adapter.Account.Positions)
+      foreach (var position in adapter.Account.Positions.Values.Where(o => Equals(name, o.Name)))
       {
-        var side = position.Value.Side is OrderSideEnum.Buy ? OrderSideEnum.Sell : OrderSideEnum.Buy;
+        var side = position.Side is OrderSideEnum.Buy ? OrderSideEnum.Sell : OrderSideEnum.Buy;
         var order = new OrderModel
         {
           Side = side,
           Type = OrderTypeEnum.Market,
           Transaction = new()
           {
-            Volume = position.Value.Transaction.Volume,
-            Instrument = position.Value.Transaction.Instrument
+            Volume = position.Transaction.Volume,
+            Instrument = position.Transaction.Instrument
           }
         };
 

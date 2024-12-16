@@ -193,14 +193,14 @@ namespace Simulation
         .Errors
         .Select(error => new ErrorModel { ErrorMessage = error.ErrorMessage }))];
 
-      if (response.Errors.Count > 0)
+      if (response.Errors.Count is not 0)
       {
         return Task.FromResult(response);
       }
 
       foreach (var order in orders)
       {
-        var nextOrders = CreateGroup(order);
+        var nextOrders = ComposeOrders(order);
 
         foreach (var nextOrder in nextOrders)
         {
@@ -297,40 +297,39 @@ namespace Simulation
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual IList<OrderModel> CreateGroup(OrderModel order)
+    protected virtual IList<OrderModel> ComposeOrders(OrderModel order)
     {
-      OrderModel updateOrder(OrderModel o, OrderModel group = null)
+      OrderModel merge(OrderModel o, OrderModel group)
       {
         var nextOrder = o.Clone() as OrderModel;
 
-        nextOrder.Price = nextOrder.GetOpenEstimate();
-        nextOrder.Type ??= group?.Type ?? OrderTypeEnum.Market;
-        nextOrder.TimeSpan ??= group?.TimeSpan ?? OrderTimeSpanEnum.Gtc;
+        nextOrder.Price ??= nextOrder.GetOpenEstimate();
+        nextOrder.Type ??= group.Type ?? OrderTypeEnum.Market;
+        nextOrder.TimeSpan ??= group.TimeSpan ?? OrderTimeSpanEnum.Gtc;
         nextOrder.Instruction ??= InstructionEnum.Side;
         nextOrder.Transaction.Time ??= DateTime.Now;
+        nextOrder.Transaction.Price ??= nextOrder.Price;
         nextOrder.Transaction.Status = OrderStatusEnum.Filled;
         nextOrder.Transaction.CurrentVolume = nextOrder.Transaction.Volume;
-        nextOrder.Transaction.Price = nextOrder.Price;
+        nextOrder.Descriptor = group.Descriptor;
 
         return nextOrder;
       }
 
-      var nextOrders = new List<OrderModel>();
+      var nextOrders = order
+        .Orders
+        .Where(o => o.Instruction is InstructionEnum.Side)
+        .Select(o => merge(o, order))
+        .ToList();
+
+      order
+        .Orders
+        .Where(o => o.Instruction is InstructionEnum.Brace)
+        .ForEach(o => SendPendingOrder(o));
 
       if (order.Transaction is not null)
       {
-        nextOrders.Add(updateOrder(order));
-      }
-
-      foreach (var o in order.Orders)
-      {
-        o.Descriptor = order.Descriptor;
-
-        switch (o.Instruction)
-        {
-          case InstructionEnum.Side: nextOrders.Add(updateOrder(o, order)); break;
-          case InstructionEnum.Brace: SendPendingOrder(o); break;
-        }
+        nextOrders.Add(merge(order, order));
       }
 
       order.Orders.Clear();

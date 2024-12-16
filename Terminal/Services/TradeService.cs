@@ -494,5 +494,17 @@ namespace Terminal.Services
 
       return [order];
     }
+
+    /// <summary>
+    /// Run with delay
+    /// </summary>
+    /// <param name="action"></param>
+    /// <param name="interval"></param>
+    /// <returns></returns>
+    public static async Task Done(Action action, int interval)
+    {
+      await Task.Delay(interval);
+      action();
+    }
   }
 }

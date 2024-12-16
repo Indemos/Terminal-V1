@@ -8,23 +8,23 @@ namespace Alpaca.Mappers
   public class ExternalMap
   {
     /// <summary>
-    /// Send orders
+    /// Compose sub order
     /// </summary>
-    /// <param name="orders"></param>
+    /// <param name="order"></param>
     /// <returns></returns>
     public static NewOrderRequest GetOrder(OrderModel order)
     {
-      var instrument = order.Transaction.Instrument;
-      var name = instrument.Name;
-      var volume = OrderQuantity.Fractional((decimal)order.Transaction.Volume);
+      var action = order.Transaction;
+      var name = action.Instrument.Name;
       var side = order.Side is OrderSideEnum.Buy ? OrderSide.Buy : OrderSide.Sell;
       var orderType = GetOrderType(order.Type);
-      var duration = GetTimeInForce(order.TimeSpan);
+      var duration = GetTimeSpan(order.TimeSpan);
+      var volume = OrderQuantity.Fractional((decimal)action.Volume);
       var exOrder = new NewOrderRequest(name, volume, side, orderType, duration);
       var braces = order
         .Orders
         .Where(o => o.Instruction is InstructionEnum.Brace)
-        .Where(o => Equals(o.Name, order.Name));
+        .Where(o => Equals(o.Name, name));
 
       exOrder.ClientOrderId = order.Id;
 
@@ -40,15 +40,30 @@ namespace Alpaca.Mappers
 
       if (braces.Any())
       {
-        var TP = GetBracePrice(order, order.Side is OrderSideEnum.Buy ? 1 : -1);
-        var SL = GetBracePrice(order, order.Side is OrderSideEnum.Buy ? -1 : 1);
+        var TP = GetBracePrice(order, side is OrderSide.Buy ? 1 : -1);
+        var SL = GetBracePrice(order, side is OrderSide.Buy ? -1 : 1);
 
         exOrder.OrderClass = OrderClass.Bracket;
-        exOrder.StopLossStopPrice = SL is null ? null : (decimal)SL;
-        exOrder.TakeProfitLimitPrice = TP is null ? null : (decimal)TP;
+        exOrder.StopLossStopPrice = (decimal?)SL;
+        exOrder.TakeProfitLimitPrice = (decimal?)TP;
       }
 
       return exOrder;
+    }
+
+    /// <summary>
+    /// Get side
+    /// </summary>
+    /// <param name="timeSpan"></param>
+    /// <returns></returns>
+    public static OrderSide GetSide(OrderSideEnum? side)
+    {
+      if (side is OrderSideEnum.Sell)
+      {
+        return OrderSide.Sell;
+      }
+
+      return OrderSide.Buy;
     }
 
     /// <summary>
@@ -56,13 +71,12 @@ namespace Alpaca.Mappers
     /// </summary>
     /// <param name="timeSpan"></param>
     /// <returns></returns>
-    public static TimeInForce GetTimeInForce(OrderTimeSpanEnum? timeSpan)
+    public static TimeInForce GetTimeSpan(OrderTimeSpanEnum? timeSpan)
     {
       switch (timeSpan)
       {
         case OrderTimeSpanEnum.Day: return TimeInForce.Day;
         case OrderTimeSpanEnum.Fok: return TimeInForce.Fok;
-        case OrderTimeSpanEnum.Gtc: return TimeInForce.Gtc;
         case OrderTimeSpanEnum.Ioc: return TimeInForce.Ioc;
         case OrderTimeSpanEnum.Am: return TimeInForce.Opg;
         case OrderTimeSpanEnum.Pm: return TimeInForce.Cls;
@@ -98,6 +112,7 @@ namespace Alpaca.Mappers
     {
       var nextOrder = order
         .Orders
+        .Where(o => Equals(o.Name, order.Name))
         .FirstOrDefault(o => (o.Price - order.Price) * direction > 0);
 
       return nextOrder?.Price;

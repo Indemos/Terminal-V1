@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
@@ -238,6 +239,50 @@ namespace Terminal.Core.Domains
       }
 
       return accounts;
+    }
+
+    /// <summary>
+    /// Create separate orders when combo-orders are not supported
+    /// </summary>
+    /// <param name="order"></param>
+    /// <returns></returns>
+    protected virtual IList<OrderModel> ComposeOrders(OrderModel order)
+    {
+      OrderModel merge(OrderModel subOrder, OrderModel group)
+      {
+        var nextOrder = subOrder.Clone() as OrderModel;
+        var groupOrders = group
+          ?.Orders
+          ?.Where(o => o.Instruction is InstructionEnum.Brace)
+          ?.Where(o => Equals(o.Name, nextOrder.Name)) ?? [];
+
+        nextOrder.Price ??= nextOrder.GetOpenEstimate();
+        nextOrder.Type ??= group.Type ?? OrderTypeEnum.Market;
+        nextOrder.TimeSpan ??= group.TimeSpan ?? OrderTimeSpanEnum.Gtc;
+        nextOrder.Instruction ??= InstructionEnum.Side;
+        nextOrder.Transaction.Price ??= nextOrder.Price;
+        nextOrder.Transaction.Time ??= DateTime.Now;
+        nextOrder.Transaction.CurrentVolume = nextOrder.Transaction.Volume;
+        nextOrder.Descriptor = group.Descriptor;
+        nextOrder.Orders = [.. nextOrder.Orders, .. groupOrders];
+
+        return nextOrder;
+      }
+
+      var nextOrders = order
+        .Orders
+        .Where(o => o.Instruction is InstructionEnum.Side)
+        .Select(o => merge(o, order))
+        .ToList();
+
+      if (order.Transaction is not null)
+      {
+        nextOrders.Add(merge(order, order));
+      }
+
+      order.Orders.Clear();
+
+      return nextOrders;
     }
   }
 }

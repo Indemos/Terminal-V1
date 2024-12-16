@@ -174,6 +174,7 @@ namespace InteractiveBrokers.Mappers
       {
         case "BOND": return InstrumentEnum.Bonds;
         case "STK": return InstrumentEnum.Shares;
+        case "IND": return InstrumentEnum.Indices;
         case "OPT": return InstrumentEnum.Options;
         case "FUT": return InstrumentEnum.Futures;
         case "CFD": return InstrumentEnum.Contracts;

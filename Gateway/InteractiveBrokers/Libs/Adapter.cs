@@ -8,8 +8,10 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.Metrics;
+using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
@@ -127,6 +129,7 @@ namespace InteractiveBrokers
           point.Time ??= DateTime.Now;
           point.Instrument = instrument;
 
+          instrument.Point = point;
           instrument.Points.Add(point);
           instrument.PointGroups.Add(point, instrument.TimeFrame);
 
@@ -312,8 +315,22 @@ namespace InteractiveBrokers
 
       foreach (var order in orders)
       {
-        response.Data.Add((await CreateOrder(order)).Data);
+        try
+        {
+          var inOrders = ComposeOrders(order);
+
+          foreach (var inOrder in inOrders)
+          {
+            response.Data.Add((await CreateOrder(inOrder)).Data);
+          }
+        }
+        catch (Exception e)
+        {
+          response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+        }
       }
+
+      await GetAccount([]);
 
       return response;
     }
@@ -679,10 +696,14 @@ namespace InteractiveBrokers
     /// <returns></returns>
     protected virtual async Task<ResponseModel<OrderModel>> CreateOrder(OrderModel order)
     {
+      Account.Orders[order.Id] = order;
+
+      await Subscribe(order.Transaction.Instrument);
+
+      var orderId = _client.NextOrderId++;
       var response = new ResponseModel<OrderModel>();
       var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-      var orderId = _client.NextOrderId++;
-      var exOrder = ExternalMap.GetOrder(orderId, order, _contracts);
+      var exOrders = ExternalMap.GetOrders(orderId, order, _contracts);
       var exResponse = null as OpenOrderMessage;
 
       void subscribe(OpenOrderMessage message)
@@ -691,6 +712,7 @@ namespace InteractiveBrokers
         {
           exResponse = message;
           unsubscribe();
+          source.TrySetResult();
         }
       }
 
@@ -698,24 +720,21 @@ namespace InteractiveBrokers
       {
         _client.OpenOrder -= subscribe;
         _client.OpenOrderEnd -= unsubscribe;
-        source.TrySetResult();
       }
 
       _client.OpenOrder += subscribe;
       _client.OpenOrderEnd += unsubscribe;
-      _client.ClientSocket.placeOrder(orderId, exOrder.Contract, exOrder.Order);
+
+      foreach (var exOrder in exOrders)
+      {
+        _client.ClientSocket.placeOrder(exOrder.Order.OrderId, exOrder.Contract, exOrder.Order);
+      }
 
       await await Task.WhenAny(source.Task, Task.Delay(Timeout));
 
       response.Data = order;
-
-      if (string.Equals(exResponse.OrderState.Status, "Submitted", StringComparison.InvariantCultureIgnoreCase))
-      {
-        response.Data.Transaction.Id = $"{orderId}";
-        response.Data.Transaction.Status = InternalMap.GetOrderStatus(exResponse.OrderState.Status);
-
-        Account.Orders[order.Id] = order;
-      }
+      response.Data.Transaction.Id = $"{exResponse.OrderId}";
+      response.Data.Transaction.Status = InternalMap.GetOrderStatus(exResponse.OrderState.Status);
 
       return response;
     }

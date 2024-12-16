@@ -18,26 +18,17 @@ namespace Schwab.Mappers
       var action = order.Transaction;
       var message = new OrderMessage
       {
-        Duration = "DAY",
         Session = "NORMAL",
-        OrderType = "MARKET",
-        OrderStrategyType = "SINGLE"
+        OrderStrategyType = "SINGLE",
+        OrderType = GetOrderType(order.Type),
+        Duration = GetTimeSpan(order.TimeSpan)
       };
 
       switch (order.Type)
       {
-        case OrderTypeEnum.Stop:
-          message.OrderType = "STOP";
-          message.StopPrice = order.Price;
-          break;
-
-        case OrderTypeEnum.Limit:
-          message.OrderType = "LIMIT";
-          message.Price = order.Price;
-          break;
-
+        case OrderTypeEnum.Stop: message.StopPrice = order.Price; break;
+        case OrderTypeEnum.Limit: message.Price = order.Price; break;
         case OrderTypeEnum.StopLimit:
-          message.OrderType = "STOP_LIMIT";
           message.Price = order.Price;
           message.StopPrice = order.ActivationPrice;
           break;
@@ -46,7 +37,7 @@ namespace Schwab.Mappers
       message.OrderLegCollection = order
         .Orders
         .Where(o => o.Instruction is InstructionEnum.Side)
-        .Select(GetOrderItem)
+        .Select(o => GetSubOrder(o, order))
         .ToList();
 
       message.ChildOrderStrategies = order
@@ -56,14 +47,14 @@ namespace Schwab.Mappers
         .Select(o =>
         {
           var subOrder = GetOrder(o);
-          subOrder.OrderLegCollection = [GetOrderItem(o)];
+          subOrder.OrderLegCollection = [GetSubOrder(o, order)];
           return subOrder;
         })
         .ToList();
 
       if (order?.Transaction?.Volume is not 0)
       {
-        message.OrderLegCollection.Add(GetOrderItem(order));
+        message.OrderLegCollection.Add(GetSubOrder(order));
       }
 
       if (message.ChildOrderStrategies.Count is not 0)
@@ -72,6 +63,23 @@ namespace Schwab.Mappers
       }
 
       return message;
+    }
+
+    /// <summary>
+    /// Order side
+    /// </summary>
+    /// <param name="order"></param>
+    /// <returns></returns>
+    public static string GetOrderType(OrderTypeEnum? message)
+    {
+      switch (message)
+      {
+        case OrderTypeEnum.Stop: return "STOP";
+        case OrderTypeEnum.Limit: return "LIMIT";
+        case OrderTypeEnum.StopLimit: return "STOP_LIMIT";
+      }
+
+      return "MARKET";
     }
 
     /// <summary>
@@ -94,40 +102,72 @@ namespace Schwab.Mappers
     }
 
     /// <summary>
+    /// Convert local time in force to remote
+    /// </summary>
+    /// <param name="span"></param>
+    /// <returns></returns>
+    public static string GetTimeSpan(OrderTimeSpanEnum? span)
+    {
+      switch (span)
+      {
+        case OrderTimeSpanEnum.Day: return "DAY";
+        case OrderTimeSpanEnum.Fok: return "FILL_OR_KILL";
+      }
+
+      return "GOOD_TILL_CANCEL";
+    }
+
+    /// <summary>
     /// Create leg in a combo-order
     /// </summary>
     /// <param name="order"></param>
+    /// <param name="group"></param>
     /// <returns></returns>
-    public static OrderLegMessage GetOrderItem(OrderModel order)
+    public static OrderLegMessage GetSubOrder(OrderModel order, OrderModel group = null)
     {
+      var action = order?.Transaction ?? group?.Transaction;
+      var assetType = action?.Instrument?.Type ?? group?.Transaction?.Instrument?.Type;
+      var side = order?.Side ?? group?.Side;
       var instrument = new InstrumentMessage
       {
-        AssetType = GetInstrumentType(order.Transaction.Instrument.Type),
-        Symbol = order.Transaction.Instrument.Name
+        AssetType = GetInstrumentType(assetType),
+        Symbol = action.Instrument.Name
       };
 
       var response = new OrderLegMessage
       {
         Instrument = instrument,
         Quantity = order.Transaction.Volume,
+        Instruction = GetSide(assetType, side)
       };
 
-      switch (order.Side)
+      return response;
+    }
+
+    /// <summary>
+    /// Get external instrument type
+    /// </summary>
+    /// <param name="assetType"></param>
+    /// <param name="side"></param>
+    /// <returns></returns>
+    public static string GetSide(InstrumentEnum? assetType, OrderSideEnum? side)
+    {
+      switch (side)
       {
-        case OrderSideEnum.Buy: response.Instruction = "BUY"; break;
-        case OrderSideEnum.Sell: response.Instruction = "SELL"; break;
+        case OrderSideEnum.Buy: return "BUY"; 
+        case OrderSideEnum.Sell: return "SELL"; 
       }
 
-      if (order.Transaction.Instrument.Type is InstrumentEnum.Options)
+      if (assetType is InstrumentEnum.Options)
       {
-        switch (order.Side)
+        switch (side)
         {
-          case OrderSideEnum.Buy: response.Instruction = "BUY_TO_OPEN"; break;
-          case OrderSideEnum.Sell: response.Instruction = "SELL_TO_OPEN"; break;
+          case OrderSideEnum.Buy: return "BUY_TO_OPEN"; 
+          case OrderSideEnum.Sell: return "SELL_TO_OPEN";
         }
       }
 
-      return response;
+      return null;
     }
 
     /// <summary>

@@ -94,8 +94,8 @@ namespace Terminal.Core.Models
     {
       Orders = [];
       OrderStream = o => { };
-      Id = $"{Guid.NewGuid():N}".ToUpper();
-      Descriptor = $"{Guid.NewGuid():N}".ToUpper();
+      Id = $"{Guid.NewGuid()}";
+      Descriptor = $"{Guid.NewGuid()}";
     }
 
     /// <summary>

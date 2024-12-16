@@ -5,7 +5,6 @@ using Schwab.Mappers;
 using Schwab.Messages;
 using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -115,6 +114,9 @@ namespace Schwab
         _sender = new Service();
 
         await UpdateToken("/v1/oauth/token");
+
+        _accountCode = (await GetAccountCode()).Data;
+
         await GetAccount([]);
 
         _streamer = await GetConnection(ws, scheduler);
@@ -147,14 +149,16 @@ namespace Schwab
     /// <returns></returns>
     public override async Task<ResponseModel<StatusEnum>> Subscribe(InstrumentModel instrument)
     {
-      var response = new ResponseModel<StatusEnum>();
+      var response = new ResponseModel<StatusEnum>
+      {
+        Data = StatusEnum.Success
+      };
 
       try
       {
-        await Unsubscribe(instrument);
-
         var streamData = _userData.Streamer.FirstOrDefault();
 
+        await Unsubscribe(instrument);
         await SendStream(_streamer, new StreamInputMessage
         {
           Requestid = ++_counter,
@@ -168,11 +172,10 @@ namespace Schwab
             Fields = string.Join(",", Enumerable.Range(0, 10))
           }
         });
-
-        response.Data = StatusEnum.Success;
       }
       catch (Exception e)
       {
+        response.Data = default;
         response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
       }
 
@@ -239,16 +242,13 @@ namespace Schwab
 
         var optionResponse = await SendData<OptionChainMessage>($"/marketdata/v1/chains?{props}");
 
-        if (optionResponse.Data is not null)
-        {
-          response.Data = optionResponse
-            .Data
-            .PutExpDateMap
-            ?.Concat(optionResponse.Data.CallExpDateMap)
-            ?.SelectMany(dateMap => dateMap.Value.SelectMany(o => o.Value))
-            ?.Select(option => InternalMap.GetOption(option, optionResponse.Data))
-            ?.ToList() ?? [];
-        }
+        response.Data = optionResponse
+          .Data
+          .PutExpDateMap
+          ?.Concat(optionResponse.Data.CallExpDateMap)
+          ?.SelectMany(dateMap => dateMap.Value.SelectMany(o => o.Value))
+          ?.Select(option => InternalMap.GetOption(option, optionResponse.Data))
+          ?.ToList() ?? [];
       }
       catch (Exception e)
       {
@@ -343,7 +343,14 @@ namespace Schwab
 
       foreach (var order in orders)
       {
-        response.Data.Add((await CreateOrder(order)).Data);
+        try
+        {
+          response.Data.Add((await CreateOrder(order)).Data);
+        }
+        catch (Exception e)
+        {
+          response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+        }
       }
 
       return response;
@@ -360,7 +367,14 @@ namespace Schwab
 
       foreach (var order in orders)
       {
-        response.Data.Add((await DeleteOrder(order)).Data);
+        try
+        {
+          response.Data.Add((await DeleteOrder(order)).Data);
+        }
+        catch (Exception e)
+        {
+          response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+        }
       }
 
       return response;
@@ -378,10 +392,6 @@ namespace Schwab
       try
       {
         var accountProps = new Hashtable { ["fields"] = "positions" };
-        var accountNumbers = await SendData<AccountNumberMessage[]>("/trader/v1/accounts/accountNumbers");
-
-        _accountCode = accountNumbers.Data.First(o => Equals(o.AccountNumber, Account.Descriptor)).HashValue;
-
         var account = await SendData<AccountsMessage>($"/trader/v1/accounts/{_accountCode}?{accountProps.Query()}");
         var orders = await GetOrders(null, criteria);
         var positions = await GetPositions(null, criteria);
@@ -426,9 +436,12 @@ namespace Schwab
 
         }.Merge(criteria);
 
-        var items = await SendData<OrderMessage[]>($"/trader/v1/accounts/{_accountCode}/orders?{props}");
+        var orders = await SendData<OrderMessage[]>($"/trader/v1/accounts/{_accountCode}/orders?{props}");
 
-        response.Data = [.. items.Data.Where(o => o.CloseTime is null).Select(InternalMap.GetOrder)];
+        response.Data = [.. orders
+          .Data
+          .Where(o => o.CloseTime is null)
+          .Select(InternalMap.GetOrder)];
       }
       catch (Exception e)
       {
@@ -458,6 +471,29 @@ namespace Schwab
           .SecuritiesAccount
           .Positions
           .Select(InternalMap.GetPosition)];
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
+
+      return response;
+    }
+
+    /// <summary>
+    /// Sync open balance, order, and positions 
+    /// </summary>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
+    protected virtual async Task<ResponseModel<string>> GetAccountCode()
+    {
+      var response = new ResponseModel<string>();
+
+      try
+      {
+        var accountNumbers = await SendData<AccountNumberMessage[]>("/trader/v1/accounts/accountNumbers");
+
+        response.Data = accountNumbers.Data.First(o => Equals(o.AccountNumber, Account.Descriptor)).HashValue;
       }
       catch (Exception e)
       {
@@ -533,16 +569,10 @@ namespace Schwab
       });
 
       var adminResponse = await ReceiveStream<StreamLoginResponseMessage>(ws);
-      var adminCode = adminResponse?.Response?.FirstOrDefault()?.Content?.Code;
+      var adminCode = adminResponse.Response.FirstOrDefault().Content.Code;
       var pointMap = Account
         .Instruments
         .ToDictionary(o => o.Key, o => new PointModel());
-
-      if (adminCode is not 0)
-      {
-        InstanceService<MessageService>.Instance.OnMessage(new MessageModel<string> { Message = "No stream" });
-        return ws;
-      }
 
       scheduler.Send(async () =>
       {
@@ -623,7 +653,7 @@ namespace Schwab
     /// <typeparam name="T"></typeparam>
     /// <param name="source"></param>
     /// <param name="verb"></param>
-    /// <param name="query"></param>
+    /// <param name="content"></param>
     /// <returns></returns>
     protected virtual async Task<Dis.ResponseModel<T>> SendData<T>(string source, HttpMethod verb = null, object content = null)
     {
@@ -689,6 +719,11 @@ namespace Schwab
       var response = new ResponseModel<UserDataMessage>();
       var userResponse = await SendData<UserDataMessage>($"/trader/v1/userPreference");
 
+      if (string.IsNullOrEmpty(userResponse.Error) is false)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = userResponse.Error }];
+      }
+
       _userData = response.Data = userResponse.Data;
 
       return response;
@@ -701,31 +736,31 @@ namespace Schwab
     /// <returns></returns>
     protected virtual async Task<ResponseModel<OrderModel>> CreateOrder(OrderModel order)
     {
-      var inResponse = new ResponseModel<OrderModel>();
-
       Account.Orders[order.Id] = order;
 
-      var exOrder = ExternalMap.GetOrder(order);
-      var exResponse = await SendData<OrderMessage>($"/trader/v1/accounts/{_accountCode}/orders", HttpMethod.Post, exOrder);
+      await Subscribe(order.Transaction.Instrument);
 
-      inResponse.Data = order;
+      var exOrder = ExternalMap.GetOrder(order);
+      var response = new ResponseModel<OrderModel>();
+      var exResponse = await SendData<OrderMessage>($"/trader/v1/accounts/{_accountCode}/orders", HttpMethod.Post, exOrder);
 
       if (exResponse.Message.Headers.TryGetValues("Location", out var orderData))
       {
         var orderItem = orderData.First();
-        var orderId = $"{orderItem[(orderItem.LastIndexOf('/') + 1)..]}";
 
-        if (string.IsNullOrEmpty(orderId))
-        {
-          inResponse.Errors.Add(new ErrorModel { ErrorMessage = $"{exResponse.Message.StatusCode}" });
-          return inResponse;
-        }
-
-        inResponse.Data.Transaction.Id = orderId;
-        inResponse.Data.Transaction.Status = OrderStatusEnum.Filled;
+        response.Data = order;
+        response.Data.Transaction.Status = OrderStatusEnum.Filled;
+        response.Data.Transaction.Id = $"{orderItem[(orderItem.LastIndexOf('/') + 1)..]}";
       }
 
-      return inResponse;
+      if (string.IsNullOrEmpty(response?.Data?.Transaction?.Id))
+      {
+        response.Errors.Add(new ErrorModel { ErrorMessage = $"{exResponse.Message.StatusCode}" });
+      }
+
+      await GetAccount([]);
+
+      return response;
     }
 
     /// <summary>
@@ -735,19 +770,19 @@ namespace Schwab
     /// <returns></returns>
     protected virtual async Task<ResponseModel<OrderModel>> DeleteOrder(OrderModel order)
     {
-      var inResponse = new ResponseModel<OrderModel>();
+      var response = new ResponseModel<OrderModel>();
       var exResponse = await SendData<OrderMessage>($"/trader/v1/accounts/{_accountCode}/orders/{order.Transaction.Id}", HttpMethod.Delete);
 
       if ((int)exResponse.Message.StatusCode >= 400)
       {
-        inResponse.Errors.Add(new ErrorModel { ErrorMessage = $"{exResponse.Message.StatusCode}" });
-        return inResponse;
+        response.Errors.Add(new ErrorModel { ErrorMessage = $"{exResponse.Message.StatusCode}" });
+        return response;
       }
 
-      inResponse.Data = order;
-      inResponse.Data.Transaction.Status = OrderStatusEnum.Canceled;
+      response.Data = order;
+      response.Data.Transaction.Status = OrderStatusEnum.Canceled;
 
-      return inResponse;
+      return response;
     }
   }
 }

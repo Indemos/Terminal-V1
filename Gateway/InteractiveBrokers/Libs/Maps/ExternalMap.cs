@@ -3,6 +3,10 @@ using InteractiveBrokers.Enums;
 using InteractiveBrokers.Messages;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing;
+using System.Linq;
+using System.Xml.Linq;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
@@ -19,18 +23,40 @@ namespace InteractiveBrokers.Mappers
     /// <param name="orderModel"></param>
     /// <param name="contracts"></param>
     /// <returns></returns>
-    public static OpenOrderMessage GetOrder(int orderId, OrderModel orderModel, IDictionary<string, Contract> contracts)
+    public static IList<OpenOrderMessage> GetOrders(int orderId, OrderModel orderModel, IDictionary<string, Contract> contracts)
     {
-      var order = GetSubOrder(orderId, orderModel);
+      var response = new List<OpenOrderMessage>();
+      var order = new Order();
       var action = orderModel.Transaction;
       var instrument = action.Instrument;
       var contract = contracts.Get(instrument.Name) ?? GetContract(action.Instrument);
 
-      return new OpenOrderMessage
+      order.OrderId = orderId;
+      order.Action = GetSide(orderModel.Side);
+      order.Tif = GetTimeSpan(orderModel.TimeSpan);
+      order.OrderType = GetOrderType(orderModel.Type);
+      order.TotalQuantity = (decimal)orderModel.Transaction.Volume;
+
+      switch (orderModel.Type)
       {
-        Order = order,
+        case OrderTypeEnum.Stop: order.AuxPrice = orderModel.Price.Value; break;
+        case OrderTypeEnum.Limit: order.LmtPrice = orderModel.Price.Value; break;
+        case OrderTypeEnum.StopLimit:
+          order.LmtPrice = orderModel.Price.Value;
+          order.AuxPrice = orderModel.ActivationPrice.Value;
+          break;
+      }
+
+      var TP = GetBracePrice(orderModel, orderModel.Side is OrderSideEnum.Buy ? 1 : -1);
+      var SL = GetBracePrice(orderModel, orderModel.Side is OrderSideEnum.Buy ? -1 : 1);
+
+      response = [.. GetBraces(order, SL, TP).Select(o => new OpenOrderMessage
+      {
+        Order = o,
         Contract = contract
-      };
+      })];
+
+      return response;
     }
 
     /// <summary>
@@ -132,6 +158,7 @@ namespace InteractiveBrokers.Mappers
       {
         case InstrumentEnum.Bonds: return "BOND";
         case InstrumentEnum.Shares: return "STK";
+        case InstrumentEnum.Indices: return "IND";
         case InstrumentEnum.Options: return "OPT";
         case InstrumentEnum.Futures: return "FUT";
         case InstrumentEnum.Contracts: return "CFD";
@@ -173,41 +200,13 @@ namespace InteractiveBrokers.Mappers
     }
 
     /// <summary>
-    /// Basic order 
-    /// </summary>
-    /// <param name="id"></param>
-    /// <param name="orderModel"></param>
-    /// <returns></returns>
-    public static Order GetSubOrder(int id, OrderModel orderModel)
-    {
-      var order = new Order();
-
-      order.OrderId = id;
-      order.Action = GetSide(orderModel.Side);
-      order.OrderType = GetOrderType(orderModel.Type);
-      order.TotalQuantity = (decimal)orderModel.Transaction.Volume;
-
-      switch (orderModel.Type)
-      {
-        case OrderTypeEnum.Stop: order.AuxPrice = orderModel.Price.Value; break;
-        case OrderTypeEnum.Limit: order.LmtPrice = orderModel.Price.Value; break;
-        case OrderTypeEnum.StopLimit:
-          order.LmtPrice = orderModel.Price.Value;
-          order.AuxPrice = orderModel.ActivationPrice.Value;
-          break;
-      }
-
-      return order;
-    }
-
-    /// <summary>
     /// Bracket template
     /// </summary>
     /// <param name="order"></param>
-    /// <param name="TP"></param>
-    /// <param name="SL"></param>
+    /// <param name="stopPrice"></param>
+    /// <param name="takePrice"></param>
     /// <returns></returns>
-    public static List<Order> GetBraces(Order order, double? stopPrice, double? takePrice)
+    public static IList<Order> GetBraces(Order order, double? stopPrice, double? takePrice)
     {
       var orders = new List<Order> { order };
 
@@ -246,6 +245,22 @@ namespace InteractiveBrokers.Mappers
       }
 
       return orders;
+    }
+
+    /// <summary>
+    /// Get price for brackets
+    /// </summary>
+    /// <param name="order"></param>
+    /// <param name="direction"></param>
+    /// <returns></returns>
+    public static double? GetBracePrice(OrderModel order, double direction)
+    {
+      var nextOrder = order
+        .Orders
+        .Where(o => Equals(o.Name, order.Name))
+        .FirstOrDefault(o => (o.Price - order.Price) * direction > 0);
+
+      return nextOrder?.Price;
     }
   }
 }

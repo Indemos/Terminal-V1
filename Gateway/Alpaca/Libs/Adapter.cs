@@ -116,6 +116,8 @@ namespace Alpaca
 
       async Task subscribe<T>() where T : class, IStreamingDataClient
       {
+        await Unsubscribe(instrument);
+
         var client = _streamingClients[instrument.Type.Value] as T;
         var onPointSub = client.GetQuoteSubscription(instrument.Name);
         var onTradeSub = client.GetTradeSubscription(instrument.Name);
@@ -131,8 +133,6 @@ namespace Alpaca
 
       try
       {
-        await Unsubscribe(instrument);
-
         switch (instrument.Type)
         {
           case InstrumentEnum.Coins: await subscribe<IAlpacaCryptoStreamingClient>(); break;
@@ -448,7 +448,6 @@ namespace Alpaca
     /// <param name="orders"></param>
     /// <returns></returns>
     public override async Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders)
-
     {
       var response = new ResponseModel<IList<OrderModel>> { Data = [] };
 
@@ -456,21 +455,20 @@ namespace Alpaca
       {
         try
         {
-          Account.Orders[order.Id] = order;
+          var inOrders = ComposeOrders(order);
 
-          var exOrder = ExternalMap.GetOrder(order);
-          var exResponse = await _tradingClient.PostOrderAsync(exOrder);
-
-          order.Transaction.Id = $"{exResponse.OrderId}";
-          order.Transaction.Status = InternalMap.GetStatus(exResponse.OrderStatus);
-
-          response.Data.Add(order);
+          foreach (var inOrder in inOrders)
+          {
+            response.Data.Add((await CreateOrder(inOrder)).Data);
+          }
         }
         catch (Exception e)
         {
           response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
         }
       }
+
+      await GetAccount([]);
 
       return response;
     }
@@ -488,6 +486,27 @@ namespace Alpaca
       {
         await _tradingClient.CancelOrderAsync(Guid.Parse(order.Transaction.Id));
       }
+
+      return response;
+    }
+
+    /// <summary>
+    /// Send order
+    /// </summary>
+    /// <param name="order"></param>
+    /// <returns></returns>
+    protected virtual async Task<ResponseModel<OrderModel>> CreateOrder(OrderModel order)
+    {
+      Account.Orders[order.Id] = order;
+
+      await Subscribe(order.Transaction.Instrument);
+
+      var exOrder = ExternalMap.GetOrder(order);
+      var response = new ResponseModel<OrderModel>();
+      var exResponse = await _tradingClient.PostOrderAsync(exOrder);
+
+      order.Transaction.Id = $"{exResponse.OrderId}";
+      order.Transaction.Status = InternalMap.GetStatus(exResponse.OrderStatus);
 
       return response;
     }

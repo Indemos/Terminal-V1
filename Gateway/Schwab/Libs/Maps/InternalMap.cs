@@ -5,7 +5,6 @@ using System.Linq;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Schwab.Mappers
 {
@@ -59,12 +58,12 @@ namespace Schwab.Mappers
       switch (assetType)
       {
         case "ETF":
-        case "INDEX":
         case "EQUITY":
         case "EXTENDED":
         case "INDICATOR":
         case "FUNDAMENTAL":
         case "MUTUAL_FUND": return InstrumentEnum.Shares;
+        case "INDEX": return InstrumentEnum.Indices;
         case "BOND": return InstrumentEnum.Bonds;
         case "FOREX": return InstrumentEnum.Currencies;
         case "FUTURE": return InstrumentEnum.Futures;

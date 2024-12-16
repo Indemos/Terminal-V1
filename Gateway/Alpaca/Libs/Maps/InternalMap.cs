@@ -83,7 +83,8 @@ namespace Alpaca.Mappers
     {
       var instrument = new InstrumentModel
       {
-        Name = message.Symbol
+        Name = message.Symbol,
+        Type = GetInstrumentType(message.AssetClass)
       };
 
       var action = new TransactionModel
@@ -144,8 +145,9 @@ namespace Alpaca.Mappers
 
       var instrument = new InstrumentModel
       {
+        Point = point,
         Name = message.Symbol,
-        Point = point
+        Type = GetInstrumentType(message.AssetClass)
       };
 
       var action = new TransactionModel
@@ -261,6 +263,23 @@ namespace Alpaca.Mappers
         case TimeInForce.Ioc: return OrderTimeSpanEnum.Ioc;
         case TimeInForce.Opg: return OrderTimeSpanEnum.Am;
         case TimeInForce.Cls: return OrderTimeSpanEnum.Pm;
+      }
+
+      return null;
+    }
+
+    /// <summary>
+    /// Asset type
+    /// </summary>
+    /// <param name="assetType"></param>
+    /// <returns></returns>
+    public static InstrumentEnum? GetInstrumentType(AssetClass assetType)
+    {
+      switch (assetType)
+      {
+        case AssetClass.Crypto: return InstrumentEnum.Coins;
+        case AssetClass.UsEquity: return InstrumentEnum.Shares;
+        case AssetClass.UsOption: return InstrumentEnum.Options;
       }
 
       return null;
