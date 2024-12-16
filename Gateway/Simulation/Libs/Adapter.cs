@@ -212,6 +212,7 @@ namespace Simulation
             case OrderTypeEnum.Market: SendOrder(nextOrder); break;
           }
 
+          nextOrder.Orders.ForEach(o => SendPendingOrder(o));
           response.Data.Add(nextOrder);
         }
       }
@@ -266,6 +267,7 @@ namespace Simulation
     protected virtual OrderModel SendOrder(OrderModel order)
     {
       order.Transaction.Id = order.Id;
+      order.Transaction.Status = OrderStatusEnum.Filled;
 
       if (Account.Positions.TryGetValue(order.Name, out var currentOrder))
       {
@@ -290,51 +292,6 @@ namespace Simulation
       }
 
       return order;
-    }
-
-    /// <summary>
-    /// Create position when there are no other positions
-    /// </summary>
-    /// <param name="order"></param>
-    /// <returns></returns>
-    protected virtual IList<OrderModel> ComposeOrders(OrderModel order)
-    {
-      OrderModel merge(OrderModel o, OrderModel group)
-      {
-        var nextOrder = o.Clone() as OrderModel;
-
-        nextOrder.Price ??= nextOrder.GetOpenEstimate();
-        nextOrder.Type ??= group.Type ?? OrderTypeEnum.Market;
-        nextOrder.TimeSpan ??= group.TimeSpan ?? OrderTimeSpanEnum.Gtc;
-        nextOrder.Instruction ??= InstructionEnum.Side;
-        nextOrder.Transaction.Time ??= DateTime.Now;
-        nextOrder.Transaction.Price ??= nextOrder.Price;
-        nextOrder.Transaction.Status = OrderStatusEnum.Filled;
-        nextOrder.Transaction.CurrentVolume = nextOrder.Transaction.Volume;
-        nextOrder.Descriptor = group.Descriptor;
-
-        return nextOrder;
-      }
-
-      var nextOrders = order
-        .Orders
-        .Where(o => o.Instruction is InstructionEnum.Side)
-        .Select(o => merge(o, order))
-        .ToList();
-
-      order
-        .Orders
-        .Where(o => o.Instruction is InstructionEnum.Brace)
-        .ForEach(o => SendPendingOrder(o));
-
-      if (order.Transaction is not null)
-      {
-        nextOrders.Add(merge(order, order));
-      }
-
-      order.Orders.Clear();
-
-      return nextOrders;
     }
 
     /// <summary>

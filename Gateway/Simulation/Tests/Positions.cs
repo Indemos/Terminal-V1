@@ -56,8 +56,6 @@ namespace Terminal.Tests
         }
       };
 
-      var openPrice = order.Side is OrderSideEnum.Buy ? point.Bid : point.Ask;
-
       base.CreateOrders(order);
 
       Assert.Empty(Account.Deals);
@@ -67,7 +65,7 @@ namespace Terminal.Tests
       var outOrder = Account.Orders[order.Id];
 
       Assert.Equal(outOrder.Type, orderType);
-      Assert.Equal(outOrder.Price, openPrice);
+      Assert.Equal(outOrder.Price, orderPrice);
       Assert.Equal(outOrder.TimeSpan, OrderTimeSpanEnum.Gtc);
       Assert.NotEmpty(outOrder.Transaction.Id);
       Assert.Equal(outOrder.Transaction.Id, order.Id);

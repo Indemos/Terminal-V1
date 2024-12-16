@@ -254,7 +254,8 @@ namespace Terminal.Core.Domains
         var groupOrders = group
           ?.Orders
           ?.Where(o => o.Instruction is InstructionEnum.Brace)
-          ?.Where(o => Equals(o.Name, nextOrder.Name)) ?? [];
+          ?.Where(o => Equals(o.Name, nextOrder.Name))
+          ?.Select(o => { o.Descriptor = group.Descriptor; return o; }) ?? [];
 
         nextOrder.Price ??= nextOrder.GetOpenEstimate();
         nextOrder.Type ??= group.Type ?? OrderTypeEnum.Market;
@@ -264,14 +265,14 @@ namespace Terminal.Core.Domains
         nextOrder.Transaction.Time ??= DateTime.Now;
         nextOrder.Transaction.CurrentVolume = nextOrder.Transaction.Volume;
         nextOrder.Descriptor = group.Descriptor;
-        nextOrder.Orders = [.. nextOrder.Orders, .. groupOrders];
+        nextOrder.Orders = [.. groupOrders];
 
         return nextOrder;
       }
 
       var nextOrders = order
         .Orders
-        .Where(o => o.Instruction is InstructionEnum.Side)
+        .Where(o => o.Instruction is InstructionEnum.Side or null)
         .Select(o => merge(o, order))
         .ToList();
 
@@ -279,8 +280,6 @@ namespace Terminal.Core.Domains
       {
         nextOrders.Add(merge(order, order));
       }
-
-      order.Orders.Clear();
 
       return nextOrders;
     }
