@@ -2,7 +2,7 @@ using System;
 
 namespace Terminal.Core.Models
 {
-  public class VariableModel : ICloneable
+  public class VarianceModel : ICloneable
   {
     /// <summary>
     /// Delta
@@ -32,6 +32,6 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Clone
     /// </summary>
-    public virtual object Clone() => MemberwiseClone() as VariableModel;
+    public virtual object Clone() => MemberwiseClone() as VarianceModel;
   }
 }

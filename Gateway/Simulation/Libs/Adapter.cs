@@ -277,7 +277,7 @@ namespace Simulation
 
         Account.Positions.Remove(order.Name, out var item);
 
-        if (previousOrder?.Transaction?.Volume.Is(0) is false)
+        if (previousOrder?.Volume.Is(0) is false)
         {
           Account.Deals.Add(previousOrder);
           Account.Balance += previousOrder.GetGainEstimate();
@@ -286,7 +286,7 @@ namespace Simulation
         order = nextOrder;
       }
 
-      if (order?.Transaction?.Volume.Is(0) is false)
+      if (order?.Volume.Is(0) is false)
       {
         Account.Positions[order.Name] = order;
       }
@@ -316,15 +316,15 @@ namespace Simulation
     protected virtual (OrderModel, OrderModel) IncreaseSide(OrderModel order, OrderModel update)
     {
       var nextOrder = order.Clone() as OrderModel;
-      var volume = nextOrder.Transaction.CurrentVolume + update.Transaction.Volume;
+      var volume = nextOrder.Transaction.CurrentVolume + update.Volume;
 
       nextOrder.Transaction.Id = update.Id;
-      nextOrder.Transaction.Volume = volume;
       nextOrder.Transaction.CurrentVolume = volume;
       nextOrder.Transaction.Time = update.Transaction.Time;
       nextOrder.Transaction.Descriptor ??= update.Transaction.Descriptor;
       nextOrder.Transaction.Price = GetGroupPrice(nextOrder, update);
       nextOrder.Price = nextOrder.Transaction.Price;
+      nextOrder.Volume = volume;
 
       return (nextOrder, null);
     }
@@ -339,12 +339,12 @@ namespace Simulation
     {
       var nextOrder = order.Clone() as OrderModel;
       var previousOrder = order.Clone() as OrderModel;
-      var updateVolume = update.Transaction.Volume ?? 0;
+      var updateVolume = update.Volume ?? 0;
       var previousVolume = nextOrder.Transaction.CurrentVolume ?? 0;
       var nextVolume = Math.Abs(previousVolume - updateVolume);
 
+      nextOrder.Volume = nextVolume;
       nextOrder.Transaction.Id = update.Id;
-      nextOrder.Transaction.Volume = nextVolume;
       nextOrder.Transaction.CurrentVolume = nextVolume;
       nextOrder.Transaction.Time = update.Transaction.Time;
       nextOrder.Transaction.Descriptor ??= update.Transaction.Descriptor;
@@ -355,7 +355,7 @@ namespace Simulation
       {
         case true when nextVolume.Is(0):
         case true when previousVolume > updateVolume:
-          previousOrder.Transaction.Volume = updateVolume;
+          previousOrder.Volume = updateVolume;
           previousOrder.Transaction.CurrentVolume = updateVolume;
           break;
 
@@ -363,7 +363,7 @@ namespace Simulation
           nextOrder.Price = update.Price;
           nextOrder.Transaction.Price = update.Price;
           nextOrder.Side = nextOrder.Side is OrderSideEnum.Buy ? OrderSideEnum.Sell : OrderSideEnum.Buy;
-          previousOrder.Transaction.Volume = previousVolume;
+          previousOrder.Volume = previousVolume;
           previousOrder.Transaction.CurrentVolume = previousVolume;
           break;
       }
@@ -561,8 +561,8 @@ namespace Simulation
           return o;
         })
         .Where(o => screener?.Side is null || Equals(o.Derivative.Side, screener.Side))
-        .Where(o => screener?.MinDate is null || o.Derivative.Expiration >= screener.MinDate)
-        .Where(o => screener?.MaxDate is null || o.Derivative.Expiration <= screener.MaxDate)
+        .Where(o => screener?.MinDate is null || o.Derivative.ExpirationDate?.Date >= screener.MinDate?.Date)
+        .Where(o => screener?.MaxDate is null || o.Derivative.ExpirationDate?.Date <= screener.MaxDate?.Date)
         .Where(o => screener?.MinPrice is null || o.Derivative.Strike >= screener.MinPrice)
         .Where(o => screener?.MaxPrice is null || o.Derivative.Strike <= screener.MaxPrice)
         .ToList()

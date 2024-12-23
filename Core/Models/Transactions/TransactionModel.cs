@@ -17,11 +17,6 @@ namespace Terminal.Core.Models
     public virtual string Descriptor { get; set; }
 
     /// <summary>
-    /// Contract size
-    /// </summary>
-    public virtual double? Volume { get; set; }
-
-    /// <summary>
     /// Size of partially filled contract
     /// </summary>
     public virtual double? CurrentVolume { get; set; }

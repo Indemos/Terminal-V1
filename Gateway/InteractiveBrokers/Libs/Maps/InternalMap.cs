@@ -44,7 +44,6 @@ namespace InteractiveBrokers.Mappers
         Id = $"{message.Order.PermId}",
         Descriptor = $"{message.Contract.ConId}",
         CurrentVolume = (double)Math.Min(message.Order.FilledQuantity, message.Order.TotalQuantity),
-        Volume = (double)message.Order.TotalQuantity,
         Time = DateTime.TryParse(message.Order.ActiveStartTime, out var o) ? o : DateTime.UtcNow,
         Status = GetOrderStatus(message.OrderState.Status)
       };
@@ -55,6 +54,7 @@ namespace InteractiveBrokers.Mappers
         Type = OrderTypeEnum.Market,
         Side = GetOrderSide(message.Order.Action),
         TimeSpan = GetTimeSpan($"{message.Order.Tif}"),
+        Volume = (double)message.Order.TotalQuantity,
         Price = message.Order.LmtPrice
       };
 
@@ -93,12 +93,12 @@ namespace InteractiveBrokers.Mappers
       {
         Instrument = instrument,
         Descriptor = $"{message.Contract.ConId}",
-        CurrentVolume = volume,
-        Volume = volume
+        CurrentVolume = volume
       };
 
       var order = new OrderModel
       {
+        Volume = volume,
         Transaction = action,
         Type = OrderTypeEnum.Market,
         Price = message.AverageCost / Math.Max(1, instrument.Leverage.Value),
@@ -179,7 +179,7 @@ namespace InteractiveBrokers.Mappers
         case "FUT": return InstrumentEnum.Futures;
         case "CFD": return InstrumentEnum.Contracts;
         case "CASH": return InstrumentEnum.Currencies;
-        case "FOP": return InstrumentEnum.FuturesOptions;
+        case "FOP": return InstrumentEnum.FutureOptions;
       }
 
       return null;
@@ -205,18 +205,17 @@ namespace InteractiveBrokers.Mappers
 
       if (string.IsNullOrEmpty(contract.Symbol) is false)
       {
-        response.Basis = new InstrumentModel
-        {
-          Name = contract.Symbol
-        };
+        response.Basis = new InstrumentModel { Name = contract.Symbol };
       }
 
       if (string.IsNullOrEmpty(expiration) is false)
       {
+        var expirationDate = DateTime.ParseExact(expiration, "yyyyMMdd", CultureInfo.InvariantCulture);
         var derivative = new DerivativeModel
         {
           Strike = contract.Strike,
-          Expiration = DateTime.ParseExact(expiration, "yyyyMMdd", CultureInfo.InvariantCulture)
+          TradeDate = expirationDate,
+          ExpirationDate = expirationDate
         };
 
         switch (contract.Right)

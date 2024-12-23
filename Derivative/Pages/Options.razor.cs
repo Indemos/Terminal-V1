@@ -168,7 +168,7 @@ namespace Derivative.Pages
       }
 
       var groups = options
-        .GroupBy(o => $"{o.Derivative.Expiration}", o => o)
+        .GroupBy(o => $"{o.Derivative.ExpirationDate}", o => o)
         .ToDictionary(o => o.Key, o => o.ToList());
 
       Groups[caption] = Enumerable
@@ -225,8 +225,8 @@ namespace Derivative.Pages
             {
               var rangeItems = items.Where(o =>
               {
-                var min = o.Derivative.Expiration.Value.Date >= data.Range.Start.Date;
-                var max = o.Derivative.Expiration.Value.Date <= data.Range.End.Date;
+                var min = o.Derivative.ExpirationDate.Value.Date >= data.Range.Start.Date;
+                var max = o.Derivative.ExpirationDate.Value.Date <= data.Range.End.Date;
 
                 return min && max;
 
@@ -446,8 +446,8 @@ namespace Derivative.Pages
           .OrderBy(o => o.Derivative.Strike)
           .GroupBy(o => o.Derivative.Strike, o => o)
           .ToDictionary(o => o.Key.Value, o => o
-            .OrderBy(option => option.Derivative.Expiration)
-            .GroupBy(option => option.Derivative.Expiration)
+            .OrderBy(option => option.Derivative.ExpirationDate)
+            .GroupBy(option => option.Derivative.ExpirationDate)
             .ToDictionary(group => group.Key.Value,
              group => Compute(expression, [.. group])));
 
@@ -531,7 +531,7 @@ namespace Derivative.Pages
       {
         var x = option.Point;
         var o = option.Derivative;
-        var v = o.Variable;
+        var v = o.Variance;
 
         vars[$"{side}{nameof(v.Vega)}"] = vars.Get($"{side}{nameof(v.Vega)}") + v.Vega.Value;
         vars[$"{side}{nameof(v.Gamma)}"] = vars.Get($"{side}{nameof(v.Gamma)}") + v.Gamma.Value;
@@ -540,7 +540,7 @@ namespace Derivative.Pages
         vars[$"{side}{nameof(x.BidSize)}"] = vars.Get($"{side}{nameof(x.BidSize)}") + x.BidSize.Value;
         vars[$"{side}{nameof(x.AskSize)}"] = vars.Get($"{side}{nameof(x.AskSize)}") + x.AskSize.Value;
         vars[$"{side}{nameof(x.Volume)}"] = vars.Get($"{side}{nameof(x.Volume)}") + x.Volume.Value;
-        vars[$"{side}{nameof(o.Volatility)}"] = vars.Get($"{side}{nameof(o.Volatility)}") + o.Volatility.Value;
+        vars[$"{side}{nameof(o.Sigma)}"] = vars.Get($"{side}{nameof(o.Sigma)}") + o.Sigma.Value;
         vars[$"{side}{nameof(o.OpenInterest)}"] = vars.Get($"{side}{nameof(o.OpenInterest)}") + o.OpenInterest.Value;
         vars[$"{side}{nameof(o.IntrinsicValue)}"] = vars.Get($"{side}{nameof(o.IntrinsicValue)}") + o.IntrinsicValue.Value;
       }

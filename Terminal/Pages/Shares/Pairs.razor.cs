@@ -142,24 +142,18 @@ namespace Terminal.Pages.Shares
       var adapter = View.Adapters["Sim"];
       var orderSell = new OrderModel
       {
+        Volume = 1,
         Side = OrderSideEnum.Sell,
         Type = OrderTypeEnum.Market,
-        Transaction = new()
-        {
-          Volume = 1,
-          Instrument = assetSell
-        }
+        Transaction = new() { Instrument = assetSell }
       };
 
       var orderBuy = new OrderModel
       {
+        Volume = 1,
         Side = OrderSideEnum.Buy,
         Type = OrderTypeEnum.Market,
-        Transaction = new()
-        {
-          Volume = 1,
-          Instrument = assetBuy
-        }
+        Transaction = new() { Instrument = assetBuy }
       };
 
       adapter.CreateOrders(orderBuy, orderSell);

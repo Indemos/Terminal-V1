@@ -1,12 +1,8 @@
 using IBApi;
-using InteractiveBrokers.Enums;
 using InteractiveBrokers.Messages;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Drawing;
 using System.Linq;
-using System.Xml.Linq;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
@@ -35,7 +31,7 @@ namespace InteractiveBrokers.Mappers
       order.Action = GetSide(orderModel.Side);
       order.Tif = GetTimeSpan(orderModel.TimeSpan);
       order.OrderType = GetOrderType(orderModel.Type);
-      order.TotalQuantity = (decimal)orderModel.Transaction.Volume;
+      order.TotalQuantity = (decimal)orderModel.Volume;
 
       switch (orderModel.Type)
       {
@@ -77,7 +73,6 @@ namespace InteractiveBrokers.Mappers
       {
         Symbol = basis?.Name,
         LocalSymbol = instrument.Name,
-        Multiplier = $"{instrument.Leverage}",
         Exchange = instrument.Exchange ?? "SMART",
         SecType = GetInstrumentType(instrument.Type),
         Currency = instrument.Currency?.Name ?? nameof(CurrencyEnum.USD)
@@ -86,7 +81,7 @@ namespace InteractiveBrokers.Mappers
       if (derivative is not null)
       {
         contract.Strike = derivative.Strike ?? 0;
-        contract.LastTradeDateOrContractMonth = $"{derivative.Expiration:yyyyMMdd}";
+        contract.LastTradeDateOrContractMonth = $"{derivative.TradeDate:yyyyMMdd}";
 
         switch (derivative.Side)
         {
@@ -163,7 +158,7 @@ namespace InteractiveBrokers.Mappers
         case InstrumentEnum.Futures: return "FUT";
         case InstrumentEnum.Contracts: return "CFD";
         case InstrumentEnum.Currencies: return "CASH";
-        case InstrumentEnum.FuturesOptions: return "FOP";
+        case InstrumentEnum.FutureOptions: return "FOP";
       }
 
       return null;
@@ -185,21 +180,6 @@ namespace InteractiveBrokers.Mappers
     }
 
     /// <summary>
-    /// Get field name by code
-    /// </summary>
-    /// <param name="code"></param>
-    /// <returns></returns>
-    public static FieldCodeEnum? GetField(int code)
-    {
-      if (Enum.IsDefined(typeof(FieldCodeEnum), code))
-      {
-        return (FieldCodeEnum)code;
-      }
-
-      return null;
-    }
-
-    /// <summary>
     /// Bracket template
     /// </summary>
     /// <param name="order"></param>
@@ -210,10 +190,10 @@ namespace InteractiveBrokers.Mappers
     {
       var orders = new List<Order> { order };
 
-      order.Transmit = false;
-
       if (takePrice is not null)
       {
+        order.Transmit = false;
+
         var TP = new Order
         {
           OrderType = "LMT",
@@ -230,6 +210,8 @@ namespace InteractiveBrokers.Mappers
 
       if (stopPrice is not null)
       {
+        order.Transmit = false;
+
         var SL = new Order
         {
           OrderType = "STP",
@@ -238,11 +220,13 @@ namespace InteractiveBrokers.Mappers
           TotalQuantity = order.TotalQuantity,
           AuxPrice = stopPrice.Value,
           ParentId = order.OrderId,
-          Transmit = true
+          Transmit = false
         };
 
         orders.Add(SL);
       }
+
+      orders.Last().Transmit = true;
 
       return orders;
     }
@@ -262,5 +246,19 @@ namespace InteractiveBrokers.Mappers
 
       return nextOrder?.Price;
     }
+
+    /// <summary>
+    /// Get field name by code
+    /// </summary>
+    /// <param name="code"></param>
+    /// <returns></returns>
+    public static T? GetEnum<T>(int code) where T : struct, Enum => Enum.IsDefined(typeof(T), code) ? (T)(object)code : null;
+
+    /// <summary>
+    /// Get field name by code
+    /// </summary>
+    /// <param name="code"></param>
+    /// <returns></returns>
+    public static T? GetEnum<T>(string code) where T : struct, Enum => Enum.TryParse(code, true, out T o) ? o : null;
   }
 }

@@ -42,7 +42,7 @@ namespace Schwab.Mappers
         case "LEVELONE_FUTURES": return InstrumentEnum.Futures;
         case "LEVELONE_FOREX": return InstrumentEnum.Currencies;
         case "LEVELONE_OPTIONS": return InstrumentEnum.Options;
-        case "LEVELONE_FUTURES_OPTIONS": return InstrumentEnum.FuturesOptions;
+        case "LEVELONE_FUTURES_OPTIONS": return InstrumentEnum.FutureOptions;
       }
 
       return null;
@@ -57,6 +57,7 @@ namespace Schwab.Mappers
     {
       switch (assetType)
       {
+        case "COE":
         case "ETF":
         case "EQUITY":
         case "EXTENDED":
@@ -67,8 +68,31 @@ namespace Schwab.Mappers
         case "BOND": return InstrumentEnum.Bonds;
         case "FOREX": return InstrumentEnum.Currencies;
         case "FUTURE": return InstrumentEnum.Futures;
-        case "FUTURE_OPTION": return InstrumentEnum.FuturesOptions;
+        case "FUTURE_OPTION": return InstrumentEnum.FutureOptions;
         case "OPTION": return InstrumentEnum.Options;
+      }
+
+      return null;
+    }
+
+    /// <summary>
+    /// Asset type
+    /// </summary>
+    /// <param name="assetType"></param>
+    /// <returns></returns>
+    public static InstrumentEnum? GetOptionType(string assetType)
+    {
+      switch (assetType)
+      {
+        case "COE":
+        case "ETF":
+        case "INDEX":
+        case "EQUITY":
+        case "OPTION":
+        case "EXTENDED": return InstrumentEnum.Options;
+        case "BOND":
+        case "FUTURE":
+        case "FUTURE_OPTION": return InstrumentEnum.FutureOptions;
       }
 
       return null;
@@ -117,6 +141,7 @@ namespace Schwab.Mappers
 
       var instrument = new InstrumentModel
       {
+        Type = GetInstrumentType(message.AssetType),
         Exchange = asset?.ExchangeName,
         Name = message.Symbol,
         Point = point
@@ -156,11 +181,12 @@ namespace Schwab.Mappers
       {
         Basis = instrument,
         Point = optionPoint,
+        Name = optionMessage.Symbol,
         Leverage = optionMessage.Multiplier ?? 100,
-        Name = optionMessage.Symbol
+        Type = GetOptionType(message.AssetType)
       };
 
-      var greeks = new VariableModel
+      var variance = new VarianceModel
       {
         Rho = optionMessage.Rho ?? 0,
         Vega = optionMessage.Vega ?? 0,
@@ -172,12 +198,20 @@ namespace Schwab.Mappers
       var option = new DerivativeModel
       {
         Strike = optionMessage.StrikePrice,
-        Expiration = optionMessage.ExpirationDate,
+        ExpirationDate = optionMessage.ExpirationDate,
+        ExpirationType = GetEnum<ExpirationTypeEnum>(optionMessage.ExpirationType),
         OpenInterest = optionMessage.OpenInterest ?? 0,
         IntrinsicValue = optionMessage.IntrinsicValue ?? 0,
-        Volatility = optionMessage.Volatility ?? 0,
-        Variable = greeks
+        Sigma = optionMessage.Volatility ?? 0,
+        Variance = variance
       };
+
+      if (optionMessage.LastTradingDay is not null)
+      {
+        option.TradeDate = DateTimeOffset
+          .FromUnixTimeMilliseconds((long)optionMessage.LastTradingDay)
+          .LocalDateTime;
+      }
 
       optionInstrument.Point = optionPoint;
       optionInstrument.Derivative = option;
@@ -239,12 +273,12 @@ namespace Schwab.Mappers
         Instrument = instrument,
         Price = message.AveragePrice,
         Descriptor = message.Instrument.Symbol,
-        CurrentVolume = volume,
-        Volume = volume
+        CurrentVolume = volume
       };
 
       var order = new OrderModel
       {
+        Volume = volume,
         Transaction = action,
         Type = OrderTypeEnum.Market,
         Side = GetPositionSide(message),
@@ -289,7 +323,6 @@ namespace Schwab.Mappers
         Descriptor = message.OrderId,
         Instrument = instrument,
         CurrentVolume = GetValue(message.FilledQuantity, message.Quantity),
-        Volume = GetValue(message.Quantity, message.FilledQuantity),
         Time = message.EnteredTime,
         Status = GetStatus(message)
       };
@@ -299,7 +332,8 @@ namespace Schwab.Mappers
         Transaction = action,
         Type = OrderTypeEnum.Market,
         Side = GetOrderSide(message),
-        TimeSpan = GetTimeSpan(message)
+        TimeSpan = GetTimeSpan(message),
+        Volume = GetValue(message.Quantity, message.FilledQuantity)
       };
 
       switch (message.OrderType.ToUpper())
@@ -341,13 +375,13 @@ namespace Schwab.Mappers
           var subAction = new TransactionModel
           {
             Instrument = subInstrument,
-            CurrentVolume = subOrder.Quantity,
-            Volume = subOrder.Quantity
+            CurrentVolume = subOrder.Quantity
           };
 
           order.Orders.Add(new OrderModel
           {
             Transaction = subAction,
+            Volume = subOrder.Quantity,
             Side = GetSubOrderSide(subOrder.Instruction)
           });
         }
@@ -361,7 +395,7 @@ namespace Schwab.Mappers
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    public static OrderStatusEnum GetStatus(OrderMessage message)
+    public static OrderStatusEnum? GetStatus(OrderMessage message)
     {
       switch (message.Status.ToUpper())
       {
@@ -384,7 +418,7 @@ namespace Schwab.Mappers
         case "AWAITING_STOP_CONDITION": return OrderStatusEnum.Pending;
       }
 
-      return OrderStatusEnum.None;
+      return null;
     }
 
     /// <summary>
@@ -392,7 +426,7 @@ namespace Schwab.Mappers
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    public static OrderSideEnum GetOrderSide(OrderMessage message)
+    public static OrderSideEnum? GetOrderSide(OrderMessage message)
     {
       switch (message.OrderType.ToUpper())
       {
@@ -412,7 +446,7 @@ namespace Schwab.Mappers
     /// </summary>
     /// <param name="status"></param>
     /// <returns></returns>
-    public static OrderSideEnum GetSubOrderSide(string status)
+    public static OrderSideEnum? GetSubOrderSide(string status)
     {
       switch (status?.ToUpper())
       {
@@ -428,7 +462,7 @@ namespace Schwab.Mappers
         case "NET_CREDIT": return OrderSideEnum.Sell;
       }
 
-      return OrderSideEnum.None;
+      return null;
     }
 
     /// <summary>
@@ -443,16 +477,30 @@ namespace Schwab.Mappers
 
       switch (true)
       {
-        case true when E(span, "DAY"): return OrderTimeSpanEnum.Day;
-        case true when E(span, "FILL_OR_KILL"): return OrderTimeSpanEnum.Fok;
-        case true when E(span, "GOOD_TILL_CANCEL"): return OrderTimeSpanEnum.Gtc;
-        case true when E(span, "IMMEDIATE_OR_CANCEL"): return OrderTimeSpanEnum.Ioc;
-        case true when E(session, "AM"): return OrderTimeSpanEnum.Am;
-        case true when E(session, "PM"): return OrderTimeSpanEnum.Pm;
+        case true when Same(span, "DAY"): return OrderTimeSpanEnum.Day;
+        case true when Same(span, "FILL_OR_KILL"): return OrderTimeSpanEnum.Fok;
+        case true when Same(span, "GOOD_TILL_CANCEL"): return OrderTimeSpanEnum.Gtc;
+        case true when Same(span, "IMMEDIATE_OR_CANCEL"): return OrderTimeSpanEnum.Ioc;
+        case true when Same(session, "AM"): return OrderTimeSpanEnum.Am;
+        case true when Same(session, "PM"): return OrderTimeSpanEnum.Pm;
       }
 
       return null;
     }
+
+    /// <summary>
+    /// Get field name by code
+    /// </summary>
+    /// <param name="code"></param>
+    /// <returns></returns>
+    public static T? GetEnum<T>(int code) where T : struct, Enum => Enum.IsDefined(typeof(T), code) ? (T)(object)code : null;
+
+    /// <summary>
+    /// Get field name by code
+    /// </summary>
+    /// <param name="code"></param>
+    /// <returns></returns>
+    public static T? GetEnum<T>(string code) where T : struct, Enum => Enum.TryParse(code, true, out T o) ? o : null;
 
     /// <summary>
     /// Case insensitive comparison
@@ -460,7 +508,7 @@ namespace Schwab.Mappers
     /// <param name="x"></param>
     /// <param name="o"></param>
     /// <returns></returns>
-    public static bool E(string x, string o) => string.Equals(x, o, StringComparison.OrdinalIgnoreCase);
+    public static bool Same(string x, string o) => string.Equals(x, o, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Get value or default

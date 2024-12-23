@@ -5,10 +5,16 @@ using System.Text.Json.Serialization;
 namespace Schwab.Messages
 {
   public class OptionChainMessage
-  {    
+  {
+    [JsonPropertyName("assetMainType")]
+    public string AssetType { get; set; }
+
+    [JsonPropertyName("assetSubType")]
+    public string AssetSubType { get; set; }
+
     [JsonPropertyName("symbol")]
     public string Symbol { get; set; }
-    
+
     [JsonPropertyName("status")]
     public string Status { get; set; }
     

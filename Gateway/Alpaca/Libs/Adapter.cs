@@ -455,11 +455,11 @@ namespace Alpaca
       {
         try
         {
-          var inOrders = ComposeOrders(order);
+          var subOrders = ComposeOrders(order);
 
-          foreach (var inOrder in inOrders)
+          foreach (var subOrder in subOrders)
           {
-            response.Data.Add((await CreateOrder(inOrder)).Data);
+            response.Data.Add((await CreateOrder(subOrder)).Data);
           }
         }
         catch (Exception e)

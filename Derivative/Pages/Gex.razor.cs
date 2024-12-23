@@ -207,28 +207,28 @@ namespace Derivative.Pages
       try
       {
         ce.Variables["Volume"] = option.Point.Volume;
-        ce.Variables["Volatility"] = o.Volatility;
+        ce.Variables["Volatility"] = o.Sigma;
         ce.Variables["OpenInterest"] = o.OpenInterest;
         ce.Variables["IntrinsicValue"] = o.IntrinsicValue;
         ce.Variables["BidSize"] = option.Point.BidSize;
         ce.Variables["AskSize"] = option.Point.AskSize;
-        ce.Variables["Vega"] = o.Variable.Vega;
-        ce.Variables["Gamma"] = o.Variable.Gamma;
-        ce.Variables["Theta"] = o.Variable.Theta;
-        ce.Variables["Delta"] = o.Variable.Delta;
+        ce.Variables["Vega"] = o.Variance.Vega;
+        ce.Variables["Gamma"] = o.Variance.Gamma;
+        ce.Variables["Theta"] = o.Variance.Theta;
+        ce.Variables["Delta"] = o.Variance.Delta;
 
         if (o.Side is OptionSideEnum.Put)
         {
           ce.Variables["PVolume"] = option.Point.Volume;
-          ce.Variables["PVolatility"] = o.Volatility;
+          ce.Variables["PVolatility"] = o.Sigma;
           ce.Variables["POpenInterest"] = o.OpenInterest;
           ce.Variables["PIntrinsicValue"] = o.IntrinsicValue;
           ce.Variables["PBidSize"] = option.Point.BidSize;
           ce.Variables["PAskSize"] = option.Point.AskSize;
-          ce.Variables["PVega"] = o.Variable.Vega;
-          ce.Variables["PGamma"] = o.Variable.Gamma;
-          ce.Variables["PTheta"] = o.Variable.Theta;
-          ce.Variables["PDelta"] = o.Variable.Delta;
+          ce.Variables["PVega"] = o.Variance.Vega;
+          ce.Variables["PGamma"] = o.Variance.Gamma;
+          ce.Variables["PTheta"] = o.Variance.Theta;
+          ce.Variables["PDelta"] = o.Variance.Delta;
 
           ce.Variables["CVolume"] = 0.0;
           ce.Variables["CVolatility"] = 0.0;
@@ -256,15 +256,15 @@ namespace Derivative.Pages
           ce.Variables["PDelta"] = 0.0;
 
           ce.Variables["CVolume"] = option.Point.Volume;
-          ce.Variables["CVolatility"] = o.Volatility;
+          ce.Variables["CVolatility"] = o.Sigma;
           ce.Variables["COpenInterest"] = o.OpenInterest;
           ce.Variables["CIntrinsicValue"] = o.IntrinsicValue;
           ce.Variables["CBidSize"] = option.Point.BidSize;
           ce.Variables["CAskSize"] = option.Point.AskSize;
-          ce.Variables["CVega"] = o.Variable.Vega;
-          ce.Variables["CGamma"] = o.Variable.Gamma;
-          ce.Variables["CTheta"] = o.Variable.Theta;
-          ce.Variables["CDelta"] = o.Variable.Delta;
+          ce.Variables["CVega"] = o.Variance.Vega;
+          ce.Variables["CGamma"] = o.Variance.Gamma;
+          ce.Variables["CTheta"] = o.Variance.Theta;
+          ce.Variables["CDelta"] = o.Variance.Delta;
         }
 
         return Convert.ToDouble(ce.Evaluate(expression));

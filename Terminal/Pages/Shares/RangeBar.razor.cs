@@ -127,8 +127,9 @@ namespace Terminal.Pages.Shares
         var order = new OrderModel
         {
           Side = side,
+          Volume = 100,
           Type = OrderTypeEnum.Market,
-          Transaction = new() { Volume = 100, Instrument = Instrument }
+          Transaction = new() { Instrument = Instrument }
         };
 
         Price = point.Last.Value;

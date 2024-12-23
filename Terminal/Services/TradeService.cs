@@ -20,9 +20,9 @@ namespace Terminal.Services
     /// <returns></returns>
     public static double GetDelta(OrderModel o)
     {
-      var volume = o.Transaction?.Volume;
+      var volume = o.Volume;
       var leverage = o.Transaction?.Instrument?.Leverage;
-      var delta = o.Transaction?.Instrument?.Derivative?.Variable?.Delta;
+      var delta = o.Transaction?.Instrument?.Derivative?.Variance?.Delta;
       var side = o.Side is OrderSideEnum.Buy ? 1.0 : -1.0;
 
       return ((delta ?? volume) * leverage * side) ?? 0;
@@ -53,16 +53,17 @@ namespace Terminal.Services
     /// <summary>
     /// Get option chain
     /// </summary>
+    /// <param name="adapter"></param>
     /// <param name="point"></param>
-    /// <param name="days"></param>
+    /// <param name="date"></param>
     /// <returns></returns>
-    public static async Task<IList<InstrumentModel>> GetOptions(IGateway adapter, PointModel point, int days = 1)
+    public static async Task<IList<InstrumentModel>> GetOptions(IGateway adapter, PointModel point, DateTime date)
     {
       var account = adapter.Account;
       var screener = new OptionScreenerModel
       {
-        MinDate = point.Time,
-        MaxDate = point.Time.Value.AddDays(days),
+        MinDate = date,
+        MaxDate = date,
         Instrument = point.Instrument,
         Point = point
       };
@@ -70,7 +71,7 @@ namespace Terminal.Services
       var options = await adapter.GetOptions(screener, []);
       var nextOptions = options
         .Data
-        .OrderBy(o => o.Derivative.Expiration)
+        .OrderBy(o => o.Derivative.ExpirationDate)
         .ThenBy(o => o.Derivative.Strike)
         .ThenBy(o => o.Derivative.Side)
         .ToList();
@@ -89,11 +90,11 @@ namespace Terminal.Services
       {
         var order = new OrderModel
         {
+          Volume = position.Volume,
           Side = position.Side is OrderSideEnum.Buy ? OrderSideEnum.Sell : OrderSideEnum.Buy,
           Type = OrderTypeEnum.Market,
           Transaction = new()
           {
-            Volume = position.Transaction.Volume,
             Instrument = position.Transaction.Instrument
           }
         };
@@ -151,27 +152,31 @@ namespace Terminal.Services
         [
           new OrderModel
           {
+            Volume = 1,
             Side = OrderSideEnum.Buy,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Volume = 1, Instrument = longPut }
+            Transaction = new() { Instrument = longPut }
           },
           new OrderModel
           {
+            Volume = 1,
             Side = OrderSideEnum.Buy,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Volume = 1, Instrument = longCall }
+            Transaction = new() { Instrument = longCall }
           },
           new OrderModel
           {
+            Volume = 1,
             Side = OrderSideEnum.Sell,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Volume = 1, Instrument = shortPut }
+            Transaction = new() { Instrument = shortPut }
           },
           new OrderModel
           {
+            Volume = 1,
             Side = OrderSideEnum.Sell,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Volume = 1, Instrument = shortCall }
+            Transaction = new() { Instrument = shortCall }
           }
         ]
       };
@@ -211,17 +216,19 @@ namespace Terminal.Services
         [
           new OrderModel
           {
+            Volume = 1,
             Side = OrderSideEnum.Sell,
             Instruction = InstructionEnum.Side,
             Price = shortPut.Point.Bid,
-            Transaction = new() { Volume = 1, Instrument = shortPut }
+            Transaction = new() { Instrument = shortPut }
           },
           new OrderModel
           {
+            Volume = 1,
             Side = OrderSideEnum.Sell,
             Instruction = InstructionEnum.Side,
             Price = shortCall.Point.Bid,
-            Transaction = new() { Volume = 1, Instrument = shortCall }
+            Transaction = new() { Instrument = shortCall }
           }
         ]
       };
@@ -256,9 +263,10 @@ namespace Terminal.Services
       {
         var order = new OrderModel
         {
+          Volume = Math.Abs(delta),
           Type = OrderTypeEnum.Market,
           Side = delta < 0 ? OrderSideEnum.Buy : OrderSideEnum.Sell,
-          Transaction = new() { Volume = Math.Abs(delta), Instrument = point.Instrument }
+          Transaction = new() { Instrument = point.Instrument }
         };
 
         return [order];
@@ -294,9 +302,10 @@ namespace Terminal.Services
       {
         var order = new OrderModel
         {
+          Volume = 100,
           Type = OrderTypeEnum.Market,
           Side = optionDelta > 0 ? OrderSideEnum.Buy : OrderSideEnum.Sell,
-          Transaction = new() { Volume = 100, Instrument = point.Instrument }
+          Transaction = new() { Instrument = point.Instrument }
         };
 
         return [order];
@@ -324,15 +333,15 @@ namespace Terminal.Services
         [
           new OrderModel
           {
+            Volume = 1,
             Side = OrderSideEnum.Sell,
-            Instruction = InstructionEnum.Side,
-            Transaction = new TransactionModel { Volume = 1 }
+            Instruction = InstructionEnum.Side
           },
           new OrderModel
           {
+            Volume = 1,
             Side = OrderSideEnum.Buy,
-            Instruction = InstructionEnum.Side,
-            Transaction = new TransactionModel { Volume = 1 }
+            Instruction = InstructionEnum.Side
           }
         ]
       };
@@ -386,15 +395,15 @@ namespace Terminal.Services
         [
           new OrderModel
           {
+            Volume = 1,
             Side = OrderSideEnum.Buy,
-            Instruction = InstructionEnum.Side,
-            Transaction = new TransactionModel { Volume = 1 }
+            Instruction = InstructionEnum.Side
           },
           new OrderModel
           {
+            Volume = 1,
             Side = OrderSideEnum.Sell,
-            Instruction = InstructionEnum.Side,
-            Transaction = new TransactionModel { Volume = 1 }
+            Instruction = InstructionEnum.Side
           }
         ]
       };
@@ -441,10 +450,10 @@ namespace Terminal.Services
     {
       var account = adapter.Account;
       var sideOptions = options.Where(o => Equals(o.Derivative.Side, side));
-      var minDate = options.First().Derivative.Expiration;
-      var maxDate = options.Last().Derivative.Expiration;
-      var longOptions = sideOptions.Where(o => o.Derivative.Expiration >= maxDate);
-      var shortOptions = sideOptions.Where(o => o.Derivative.Expiration <= minDate);
+      var minDate = options.First().Derivative.ExpirationDate;
+      var maxDate = options.Last().Derivative.ExpirationDate;
+      var longOptions = sideOptions.Where(o => o.Derivative.ExpirationDate >= maxDate);
+      var shortOptions = sideOptions.Where(o => o.Derivative.ExpirationDate <= minDate);
       var order = new OrderModel
       {
         Type = OrderTypeEnum.Market,
@@ -452,15 +461,15 @@ namespace Terminal.Services
         [
           new OrderModel
           {
+            Volume = 2,
             Side = OrderSideEnum.Buy,
-            Instruction = InstructionEnum.Side,
-            Transaction = new TransactionModel { Volume = 2 }
+            Instruction = InstructionEnum.Side
           },
           new OrderModel
           {
+            Volume = 1,
             Side = OrderSideEnum.Sell,
-            Instruction = InstructionEnum.Side,
-            Transaction = new TransactionModel { Volume = 1 }
+            Instruction = InstructionEnum.Side
           }
         ]
       };

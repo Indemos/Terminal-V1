@@ -28,6 +28,11 @@ namespace Terminal.Core.Models
     public virtual string Descriptor { get; set; }
 
     /// <summary>
+    /// Contract size
+    /// </summary>
+    public virtual double? Volume { get; set; }
+
+    /// <summary>
     /// Current PnL
     /// </summary>
     public virtual double? Gain { get; set; }

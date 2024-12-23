@@ -134,28 +134,31 @@ namespace Terminal.Pages.Gateways
 
       var TP = new OrderModel
       {
+        Volume = 10,
         Side = stopSide,
         Type = OrderTypeEnum.Limit,
         Instruction = InstructionEnum.Brace,
         Price = GetPrice(direction) + 15 * direction,
-        Transaction = new() { Volume = 10, Instrument = instrument }
+        Transaction = new() { Instrument = instrument }
       };
 
       var SL = new OrderModel
       {
+        Volume = 10,
         Side = stopSide,
         Type = OrderTypeEnum.Stop,
         Instruction = InstructionEnum.Brace,
         Price = GetPrice(-direction) - 15 * direction,
-        Transaction = new() { Volume = 10, Instrument = instrument }
+        Transaction = new() { Instrument = instrument }
       };
 
       var order = new OrderModel
       {
-        Price = GetPrice(direction),
+        Volume = 10,
         Side = side,
+        Price = GetPrice(direction),
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Volume = 10, Instrument = instrument },
+        Transaction = new() { Instrument = instrument },
         Orders = [SL, TP]
       };
 
@@ -173,9 +176,9 @@ namespace Terminal.Pages.Gateways
         {
           Side = side,
           Type = OrderTypeEnum.Market,
+          Volume = position.Volume,
           Transaction = new()
           {
-            Volume = position.Transaction.Volume,
             Instrument = position.Transaction.Instrument
           }
         };

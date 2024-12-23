@@ -11,6 +11,6 @@ namespace Terminal.Core.Enums
     Futures,
     Contracts,
     Currencies,
-    FuturesOptions
+    FutureOptions
   }
 }

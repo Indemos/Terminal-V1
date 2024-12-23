@@ -21,9 +21,9 @@ namespace Terminal.Core.Models
     public virtual double? IntrinsicValue { get; set; }
 
     /// <summary>
-    /// Volatility
+    /// Implied volatility
     /// </summary>
-    public virtual double? Volatility { get; set; }
+    public virtual double? Sigma { get; set; }
 
     /// <summary>
     /// CALL or PUT
@@ -31,14 +31,29 @@ namespace Terminal.Core.Models
     public virtual OptionSideEnum? Side { get; set; }
 
     /// <summary>
+    /// Expiration type
+    /// </summary>
+    public virtual ExpirationTypeEnum? ExpirationType { get; set; }
+
+    /// <summary>
     /// Expiration date
+    /// </summary>
+    public virtual DateTime? ExpirationDate { get; set; }
+
+    /// <summary>
+    /// Last trading date
+    /// </summary>
+    public virtual DateTime? TradeDate { get; set; }
+
+    /// <summary>
+    /// Last trading date
     /// </summary>
     public virtual DateTime? Expiration { get; set; }
 
     /// <summary>
     /// Option metrics
     /// </summary>
-    public virtual VariableModel Variable { get; set; }
+    public virtual VarianceModel Variance { get; set; }
 
     /// <summary>
     /// Clone

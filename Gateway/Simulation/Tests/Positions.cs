@@ -40,13 +40,13 @@ namespace Terminal.Tests
 
       var order = new OrderModel
       {
+        Volume = 1,
         Side = orderSide,
         Type = orderType,
         Price = orderPrice,
         ActivationPrice = activationPrice,
         Transaction = new()
         {
-          Volume = 1,
           Instrument = new InstrumentModel()
           {
             Name = "X",
@@ -98,12 +98,12 @@ namespace Terminal.Tests
 
       var order = new OrderModel
       {
+        Volume = 1,
         Price = price,
         Side = orderSide,
         Type = orderType,
         Transaction = new()
         {
-          Volume = 1,
           Descriptor = "Demo",
           Instrument = instrument
         }
@@ -125,10 +125,10 @@ namespace Terminal.Tests
       Assert.Equal(position.TimeSpan, OrderTimeSpanEnum.Gtc);
       Assert.Equal(position.Transaction.Status, OrderStatusEnum.Filled);
       Assert.Equal(position.Transaction.Id, order.Id);
-      Assert.Equal(position.Transaction.Volume, order.Transaction.Volume);
-      Assert.Equal(position.Transaction.CurrentVolume, order.Transaction.Volume);
+      Assert.Equal(position.Volume, order.Volume);
+      Assert.Equal(position.Transaction.CurrentVolume, order.Volume);
       Assert.NotEmpty(position.Transaction.Id);
-      Assert.NotNull(position.Transaction.Volume);
+      Assert.NotNull(position.Volume);
     }
 
     [Fact]
@@ -151,39 +151,39 @@ namespace Terminal.Tests
 
       var TP = new OrderModel
       {
+        Volume = 1,
         Price = price + 5,
         Side = OrderSideEnum.Sell,
         Type = OrderTypeEnum.Stop,
         Instruction = InstructionEnum.Brace,
         Transaction = new()
         {
-          Volume = 1,
           Instrument = instrument
         }
       };
 
       var SL = new OrderModel
       {
+        Volume = 1,
         Price = price - 5,
         Side = OrderSideEnum.Sell,
         Type = OrderTypeEnum.Limit,
         Instruction = InstructionEnum.Brace,
         Transaction = new()
         {
-          Volume = 1,
           Instrument = instrument
         }
       };
 
       var order = new OrderModel
       {
+        Volume = 1,
         Price = price,
         Side = OrderSideEnum.Buy,
         Type = OrderTypeEnum.Market,
         Orders = [SL, TP],
         Transaction = new()
         {
-          Volume = 1,
           Instrument = instrument
         }
       };
@@ -251,21 +251,24 @@ namespace Terminal.Tests
         [
           new OrderModel
           {
+            Volume = 100,
             Side = OrderSideEnum.Buy,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Volume = 100, Instrument = basis },
+            Transaction = new() { Instrument = basis },
           },
           new OrderModel
           {
+            Volume = 1, 
             Side = OrderSideEnum.Buy,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Volume = 1, Instrument = optionLong }
+            Transaction = new() { Instrument = optionLong }
           },
           new OrderModel
           {
+            Volume = 2,
             Side = OrderSideEnum.Buy,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Volume = 2, Instrument = optionShort }
+            Transaction = new() { Instrument = optionShort }
           }
         ]
       };
@@ -285,8 +288,8 @@ namespace Terminal.Tests
       Assert.Equal(openShare.Price, basis.Point.Ask);
       Assert.Equal(openShare.TimeSpan, OrderTimeSpanEnum.Day);
       Assert.NotNull(openShare.Transaction.Time);
-      Assert.Equal(openShare.Transaction.Volume, 100);
-      Assert.Equal(openShare.Transaction.CurrentVolume, openShare.Transaction.Volume);
+      Assert.Equal(openShare.Volume, 100);
+      Assert.Equal(openShare.Transaction.CurrentVolume, openShare.Volume);
       Assert.Equal(openShare.Transaction.Status, OrderStatusEnum.Filled);
       Assert.Equal(openShare.Transaction.Price, openShare.Price);
 
@@ -295,8 +298,8 @@ namespace Terminal.Tests
       Assert.Equal(openLong.Price, optionLong.Point.Ask);
       Assert.Equal(openLong.TimeSpan, OrderTimeSpanEnum.Day);
       Assert.NotNull(openLong.Transaction.Time);
-      Assert.Equal(openLong.Transaction.Volume, 1);
-      Assert.Equal(openLong.Transaction.CurrentVolume, openLong.Transaction.Volume);
+      Assert.Equal(openLong.Volume, 1);
+      Assert.Equal(openLong.Transaction.CurrentVolume, openLong.Volume);
       Assert.Equal(openLong.Transaction.Status, OrderStatusEnum.Filled);
       Assert.Equal(openLong.Transaction.Price, openLong.Price);
 
@@ -305,8 +308,8 @@ namespace Terminal.Tests
       Assert.Equal(openShort.Price, optionShort.Point.Ask);
       Assert.Equal(openShort.TimeSpan, OrderTimeSpanEnum.Day);
       Assert.NotNull(openShort.Transaction.Time);
-      Assert.Equal(openShort.Transaction.Volume, 2);
-      Assert.Equal(openShort.Transaction.CurrentVolume, openShort.Transaction.Volume);
+      Assert.Equal(openShort.Volume, 2);
+      Assert.Equal(openShort.Transaction.CurrentVolume, openShort.Volume);
       Assert.Equal(openShort.Transaction.Status, OrderStatusEnum.Filled);
       Assert.Equal(openShort.Transaction.Price, openShort.Price);
     }
@@ -343,21 +346,24 @@ namespace Terminal.Tests
         [
           new OrderModel
           {
+            Volume = 100,
             Side = OrderSideEnum.Buy,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Volume = 100, Instrument = basis },
+            Transaction = new() { Instrument = basis },
           },
           new OrderModel
           {
+            Volume = 1,
             Side = OrderSideEnum.Buy,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Volume = 1, Instrument = optionLong }
+            Transaction = new() { Instrument = optionLong }
           },
           new OrderModel
           {
+            Volume = 2,
             Side = OrderSideEnum.Buy,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Volume = 2, Instrument = optionShort }
+            Transaction = new() { Instrument = optionShort }
           }
         ]
       };
@@ -368,9 +374,10 @@ namespace Terminal.Tests
 
       var increase = new OrderModel
       {
+        Volume = 50,
         Side = OrderSideEnum.Buy,
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Volume = 50, Instrument = basis },
+        Transaction = new() { Instrument = basis },
       };
 
       base.CreateOrders(increase);
@@ -386,8 +393,8 @@ namespace Terminal.Tests
       Assert.Equal(increaseShare.Price, basis.Point.Ask);
       Assert.Equal(increaseShare.TimeSpan, OrderTimeSpanEnum.Day);
       Assert.NotNull(increaseShare.Transaction.Time);
-      Assert.Equal(increaseShare.Transaction.Volume, 150);
-      Assert.Equal(increaseShare.Transaction.CurrentVolume, increaseShare.Transaction.Volume);
+      Assert.Equal(increaseShare.Volume, 150);
+      Assert.Equal(increaseShare.Transaction.CurrentVolume, increaseShare.Volume);
       Assert.Equal(increaseShare.Transaction.Status, OrderStatusEnum.Filled);
       Assert.Equal(increaseShare.Transaction.Price, increaseShare.Price);
 
@@ -395,9 +402,10 @@ namespace Terminal.Tests
 
       var decrease = new OrderModel
       {
+        Volume = 1,
         Side = OrderSideEnum.Sell,
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Volume = 1, Instrument = optionShort },
+        Transaction = new() { Instrument = optionShort },
       };
 
       base.CreateOrders(decrease);
@@ -414,7 +422,7 @@ namespace Terminal.Tests
       Assert.Equal(decreaseShort.TimeSpan, OrderTimeSpanEnum.Day);
       Assert.NotNull(decreaseShort.Transaction.Time);
       Assert.Equal(decreaseShort.Transaction.CurrentVolume, 1);
-      Assert.Equal(decreaseShort.Transaction.CurrentVolume, decreaseShort.Transaction.Volume);
+      Assert.Equal(decreaseShort.Transaction.CurrentVolume, decreaseShort.Volume);
       Assert.Equal(decreaseShort.Transaction.Status, OrderStatusEnum.Filled);
       Assert.Equal(decreaseShort.Transaction.Price, decreaseShort.Price);
 
@@ -424,7 +432,8 @@ namespace Terminal.Tests
       {
         Side = OrderSideEnum.Sell,
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Volume = Account.Positions[basis.Name].Transaction.Volume, Instrument = basis },
+        Volume = Account.Positions[basis.Name].Volume,
+        Transaction = new() { Instrument = basis },
       };
 
       base.CreateOrders(close);
@@ -443,15 +452,17 @@ namespace Terminal.Tests
         [
           new OrderModel
           {
+            Volume = 1,
             Side = OrderSideEnum.Sell,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Volume = 1, Instrument = optionLong }
+            Transaction = new() { Instrument = optionLong }
           },
           new OrderModel
           {
+            Volume = 1,
             Side = OrderSideEnum.Sell,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Volume = 1, Instrument = optionShort }
+            Transaction = new() { Instrument = optionShort }
           }
         ]
       };
@@ -474,18 +485,20 @@ namespace Terminal.Tests
 
       var order = new OrderModel
       {
+        Volume = 5,
         Side = OrderSideEnum.Buy,
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Volume = 5, Instrument = instrument },
+        Transaction = new() { Instrument = instrument },
       };
 
       base.CreateOrders(order);
 
       var reverse = new OrderModel
       {
+        Volume = 10,
         Side = OrderSideEnum.Sell,
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Volume = 10, Instrument = instrument },
+        Transaction = new() { Instrument = instrument },
       };
 
       base.CreateOrders(reverse);
@@ -502,7 +515,7 @@ namespace Terminal.Tests
       Assert.Equal(reverseOrder.TimeSpan, OrderTimeSpanEnum.Gtc);
       Assert.NotNull(reverseOrder.Transaction.Time);
       Assert.Equal(reverseOrder.Transaction.CurrentVolume, 5);
-      Assert.Equal(reverseOrder.Transaction.CurrentVolume, reverseOrder.Transaction.Volume);
+      Assert.Equal(reverseOrder.Transaction.CurrentVolume, reverseOrder.Volume);
       Assert.Equal(reverseOrder.Transaction.Status, OrderStatusEnum.Filled);
       Assert.Equal(reverseOrder.Transaction.Price, reverseOrder.Price);
     }
@@ -512,11 +525,11 @@ namespace Terminal.Tests
     {
       var orderX = new OrderModel
       {
+        Volume = 5,
         Side = OrderSideEnum.Buy,
         Type = OrderTypeEnum.Market,
         Transaction = new()
         {
-          Volume = 5,
           Instrument = new InstrumentModel
           {
             Name = "SPY",
@@ -527,11 +540,11 @@ namespace Terminal.Tests
 
       var orderY = new OrderModel
       {
+        Volume = 5,
         Side = OrderSideEnum.Buy,
         Type = OrderTypeEnum.Market,
         Transaction = new()
         {
-          Volume = 5,
           Instrument = new InstrumentModel
           {
             Name = "MSFT",

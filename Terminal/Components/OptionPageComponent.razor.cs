@@ -46,6 +46,7 @@ namespace Terminal.Components
       View.OnPreConnect = () =>
       {
         View.Adapters["Sim"] = CreateSimAccount();
+        View.Adapters["Sim"].PointStream += o => action(o.Next);
       };
 
       View.OnPostConnect = () =>
@@ -55,8 +56,6 @@ namespace Terminal.Components
         View.DealsView.UpdateItems(account.Deals);
         View.OrdersView.UpdateItems(account.Orders.Values);
         View.PositionsView.UpdateItems(account.Positions.Values);
-
-        View.Adapters["Sim"].PointStream += o => action(o.Next);
       };
 
       View.OnDisconnect = () =>
@@ -115,7 +114,7 @@ namespace Terminal.Components
     {
       var adapter = View.Adapters["Sim"];
       var account = adapter.Account;
-      var options = await TradeService.GetOptions(adapter, point, days);
+      var options = await TradeService.GetOptions(adapter, point, point.Time.Value.AddDays(days));
 
       action([.. options]);
 
@@ -132,9 +131,9 @@ namespace Terminal.Components
       FramesView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", View.ReportsView.GetShape<CandleShape>(point));
 
       View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Volume", "CallPutVolume", new AreaShape { Y = calls.Sum(o => o.Point.Volume) - puts.Sum(o => o.Point.Volume), Component = com });
-      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Delta", "CallPutDelta", new AreaShape { Y = calls.Sum(o => o.Derivative.Variable.Delta) + puts.Sum(o => o.Derivative.Variable.Delta), Component = com });
-      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Vega", "CallPutVega", new AreaShape { Y = calls.Sum(o => o.Derivative.Variable.Vega) - puts.Sum(o => o.Derivative.Variable.Vega), Component = com });
-      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Theta", "CallPutTheta", new AreaShape { Y = calls.Sum(o => o.Derivative.Variable.Theta) - puts.Sum(o => o.Derivative.Variable.Theta), Component = com });
+      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Delta", "CallPutDelta", new AreaShape { Y = calls.Sum(o => o.Derivative.Variance.Delta) + puts.Sum(o => o.Derivative.Variance.Delta), Component = com });
+      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Vega", "CallPutVega", new AreaShape { Y = calls.Sum(o => o.Derivative.Variance.Vega) - puts.Sum(o => o.Derivative.Variance.Vega), Component = com });
+      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Theta", "CallPutTheta", new AreaShape { Y = calls.Sum(o => o.Derivative.Variance.Theta) - puts.Sum(o => o.Derivative.Variance.Theta), Component = com });
       View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Ratios", "CallPutDomRatio", new AreaShape { Y = (callBids - callAsks) - (putBids - putAsks), Component = com });
 
       var performance = Performance.Calculate([account]);
@@ -164,14 +163,14 @@ namespace Terminal.Components
       PositionsView.UpdateItems(point.Time.Value.Ticks, "Volume", "ShortVolume", new AreaShape { Y = -shorts.Sum(o => o.Transaction.Instrument.Point.Volume), Component = comDown });
       PositionsView.UpdateItems(point.Time.Value.Ticks, "Delta", "LongDelta", new AreaShape { Y = longs.Sum(TradeService.GetDelta), Component = comUp });
       PositionsView.UpdateItems(point.Time.Value.Ticks, "Delta", "ShortDelta", new AreaShape { Y = shorts.Sum(TradeService.GetDelta), Component = comDown });
-      PositionsView.UpdateItems(point.Time.Value.Ticks, "Gamma", "LongGamma", new AreaShape { Y = longs.Sum(o => o.Transaction.Instrument.Derivative?.Variable?.Gamma ?? 0), Component = comUp });
-      PositionsView.UpdateItems(point.Time.Value.Ticks, "Gamma", "ShortGamma", new AreaShape { Y = -shorts.Sum(o => o.Transaction.Instrument.Derivative?.Variable?.Gamma ?? 0), Component = comDown });
-      PositionsView.UpdateItems(point.Time.Value.Ticks, "Theta", "LongTheta", new AreaShape { Y = -longs.Sum(o => o.Transaction.Instrument.Derivative?.Variable?.Theta ?? 0), Component = comUp });
-      PositionsView.UpdateItems(point.Time.Value.Ticks, "Theta", "ShortTheta", new AreaShape { Y = shorts.Sum(o => o.Transaction.Instrument.Derivative?.Variable?.Theta ?? 0), Component = comDown });
-      PositionsView.UpdateItems(point.Time.Value.Ticks, "Vega", "LongVega", new AreaShape { Y = longs.Sum(o => o.Transaction.Instrument.Derivative?.Variable?.Vega ?? 0), Component = comUp });
-      PositionsView.UpdateItems(point.Time.Value.Ticks, "Vega", "ShortVega", new AreaShape { Y = -shorts.Sum(o => o.Transaction.Instrument.Derivative?.Variable?.Vega ?? 0), Component = comDown });
-      PositionsView.UpdateItems(point.Time.Value.Ticks, "Iv", "LongIv", new AreaShape { Y = longs.Sum(o => o.Transaction.Instrument.Derivative?.Volatility ?? 0), Component = comUp });
-      PositionsView.UpdateItems(point.Time.Value.Ticks, "Iv", "ShortIv", new AreaShape { Y = -shorts.Sum(o => o.Transaction.Instrument.Derivative?.Volatility ?? 0), Component = comDown });
+      PositionsView.UpdateItems(point.Time.Value.Ticks, "Gamma", "LongGamma", new AreaShape { Y = longs.Sum(o => o.Transaction.Instrument.Derivative?.Variance?.Gamma ?? 0), Component = comUp });
+      PositionsView.UpdateItems(point.Time.Value.Ticks, "Gamma", "ShortGamma", new AreaShape { Y = -shorts.Sum(o => o.Transaction.Instrument.Derivative?.Variance?.Gamma ?? 0), Component = comDown });
+      PositionsView.UpdateItems(point.Time.Value.Ticks, "Theta", "LongTheta", new AreaShape { Y = -longs.Sum(o => o.Transaction.Instrument.Derivative?.Variance?.Theta ?? 0), Component = comUp });
+      PositionsView.UpdateItems(point.Time.Value.Ticks, "Theta", "ShortTheta", new AreaShape { Y = shorts.Sum(o => o.Transaction.Instrument.Derivative?.Variance?.Theta ?? 0), Component = comDown });
+      PositionsView.UpdateItems(point.Time.Value.Ticks, "Vega", "LongVega", new AreaShape { Y = longs.Sum(o => o.Transaction.Instrument.Derivative?.Variance?.Vega ?? 0), Component = comUp });
+      PositionsView.UpdateItems(point.Time.Value.Ticks, "Vega", "ShortVega", new AreaShape { Y = -shorts.Sum(o => o.Transaction.Instrument.Derivative?.Variance?.Vega ?? 0), Component = comDown });
+      PositionsView.UpdateItems(point.Time.Value.Ticks, "Iv", "LongIv", new AreaShape { Y = longs.Sum(o => o.Transaction.Instrument.Derivative?.Sigma ?? 0), Component = comUp });
+      PositionsView.UpdateItems(point.Time.Value.Ticks, "Iv", "ShortIv", new AreaShape { Y = -shorts.Sum(o => o.Transaction.Instrument.Derivative?.Sigma ?? 0), Component = comDown });
 
       View.DealsView.UpdateItems(account.Deals);
       View.OrdersView.UpdateItems(account.Orders.Values);
@@ -198,10 +197,10 @@ namespace Terminal.Components
         var inputModel = new OptionInputModel
         {
           Price = point.Last.Value,
-          Amount = pos.Transaction.Volume ?? 0,
+          Amount = pos.Volume ?? 0,
           Strike = pos.Transaction.Instrument?.Derivative?.Strike ?? 0,
           Premium = pos.Transaction.Instrument?.Point?.Last ?? 0,
-          Date = pos.Transaction.Instrument?.Derivative?.Expiration,
+          Date = pos.Transaction.Instrument?.Derivative?.ExpirationDate,
           Side = pos.Transaction.Instrument?.Derivative?.Side ?? 0,
           Position = pos.Side.Value
         };
@@ -254,13 +253,13 @@ namespace Terminal.Components
 
         shape.Groups["Gamma"] = new Shape();
         shape.Groups["Gamma"].Groups = new Dictionary<string, IShape>();
-        shape.Groups["Gamma"].Groups["CallGamma"] = new BarShape { X = group.Key, Y = calls.Sum(o => o?.Derivative?.Variable.Gamma ?? 0), Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-        shape.Groups["Gamma"].Groups["PutGamma"] = new BarShape { X = group.Key, Y = -puts.Sum(o => o?.Derivative?.Variable.Gamma ?? 0), Component = new ComponentModel { Color = SKColors.OrangeRed } };
+        shape.Groups["Gamma"].Groups["CallGamma"] = new BarShape { X = group.Key, Y = calls.Sum(o => o?.Derivative?.Variance.Gamma ?? 0), Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+        shape.Groups["Gamma"].Groups["PutGamma"] = new BarShape { X = group.Key, Y = -puts.Sum(o => o?.Derivative?.Variance.Gamma ?? 0), Component = new ComponentModel { Color = SKColors.OrangeRed } };
 
         shape.Groups["Theta"] = new Shape();
         shape.Groups["Theta"].Groups = new Dictionary<string, IShape>();
-        shape.Groups["Theta"].Groups["CallTheta"] = new BarShape { X = group.Key, Y = -calls.Sum(o => o?.Derivative?.Variable.Theta ?? 0), Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-        shape.Groups["Theta"].Groups["PutTheta"] = new BarShape { X = group.Key, Y = puts.Sum(o => o?.Derivative?.Variable.Theta ?? 0), Component = new ComponentModel { Color = SKColors.OrangeRed } };
+        shape.Groups["Theta"].Groups["CallTheta"] = new BarShape { X = group.Key, Y = -calls.Sum(o => o?.Derivative?.Variance.Theta ?? 0), Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+        shape.Groups["Theta"].Groups["PutTheta"] = new BarShape { X = group.Key, Y = puts.Sum(o => o?.Derivative?.Variance.Theta ?? 0), Component = new ComponentModel { Color = SKColors.OrangeRed } };
 
         shape.Groups["Volume"] = new Shape();
         shape.Groups["Volume"].Groups = new Dictionary<string, IShape>();

@@ -263,7 +263,7 @@ namespace Terminal.Core.Domains
         nextOrder.Instruction ??= InstructionEnum.Side;
         nextOrder.Transaction.Price ??= nextOrder.Price;
         nextOrder.Transaction.Time ??= DateTime.Now;
-        nextOrder.Transaction.CurrentVolume = nextOrder.Transaction.Volume;
+        nextOrder.Transaction.CurrentVolume = nextOrder.Volume;
         nextOrder.Descriptor = group.Descriptor;
         nextOrder.Orders = [.. groupOrders];
 
@@ -276,7 +276,7 @@ namespace Terminal.Core.Domains
         .Select(o => merge(o, order))
         .ToList();
 
-      if (order.Transaction is not null)
+      if (order.Volume is not null)
       {
         nextOrders.Add(merge(order, order));
       }

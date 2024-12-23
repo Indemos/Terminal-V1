@@ -53,10 +53,12 @@ namespace Alpaca.Mappers
         BidSize = (double)o.BidSize
       };
 
+      var expiration = DateTime.ParseExact(expirationDate, "yyMMdd", null);
       var derivative = new DerivativeModel
       {
         Strike = int.Parse(strikePrice) / 1000,
-        Expiration = DateTime.ParseExact(expirationDate, "yyMMdd", null)
+        ExpirationDate = expiration,
+        TradeDate = expiration
       };
 
       var basis = new InstrumentModel
@@ -92,7 +94,6 @@ namespace Alpaca.Mappers
         Id = message.ClientOrderId,
         Instrument = instrument,
         CurrentVolume = GetValue(message.FilledQuantity, message.Quantity),
-        Volume = GetValue(message.Quantity, message.FilledQuantity),
         Time = message.CreatedAtUtc,
         Status = GetStatus(message.OrderStatus)
       };
@@ -103,6 +104,7 @@ namespace Alpaca.Mappers
         Type = OrderTypeEnum.Market,
         Side = GetOrderSide(message.OrderSide),
         TimeSpan = GetTimeSpan(message.TimeInForce),
+        Volume = GetValue(message.Quantity, message.FilledQuantity),
         Id = $"{message.OrderId}"
       };
 
@@ -155,8 +157,7 @@ namespace Alpaca.Mappers
         Price = price,
         Instrument = instrument,
         Descriptor = $"{message.AssetId}",
-        CurrentVolume = GetValue(message.Quantity, message.AvailableQuantity),
-        Volume = GetValue(message.Quantity, message.AvailableQuantity)
+        CurrentVolume = GetValue(message.Quantity, message.AvailableQuantity)
       };
 
       var order = new OrderModel
@@ -165,6 +166,7 @@ namespace Alpaca.Mappers
         Type = OrderTypeEnum.Market,
         Side = GetPositionSide(message.Side),
         Price = (double)message.AverageEntryPrice,
+        Volume = GetValue(message.Quantity, message.AvailableQuantity)
       };
 
       return order;

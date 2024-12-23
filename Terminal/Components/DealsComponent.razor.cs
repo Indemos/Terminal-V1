@@ -57,7 +57,7 @@ namespace Terminal.Components
         Group = o.BasisName ?? o.Name,
         Time = o.Transaction.Time,
         Side = o.Side ?? OrderSideEnum.None,
-        Size = o.Transaction.Volume ?? 0,
+        Size = o.Volume ?? 0,
         OpenPrice = o.Price ?? 0,
         ClosePrice = o.Transaction.Price ?? 0,
         Gain = o.GetGainEstimate(o.Transaction.Price) ?? o.Gain ?? 0

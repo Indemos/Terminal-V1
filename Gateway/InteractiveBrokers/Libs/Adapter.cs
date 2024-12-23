@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Diagnostics.Metrics;
 using System.Drawing;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Terminal.Core.Domains;
@@ -122,7 +123,7 @@ namespace InteractiveBrokers
         await Unsubscribe(instrument);
 
         var id = _subscriptions[instrument.Name] = _counter++;
-        var contract = _contracts.Get(instrument.Name) ?? ExternalMap.GetContract(instrument);
+        var contract = GetContract(instrument);
 
         SubscribeToPoints(id, instrument, point =>
         {
@@ -210,11 +211,10 @@ namespace InteractiveBrokers
       {
         var id = _counter++;
         var instrument = screener.Instrument;
-        var options = new List<InstrumentModel>().AsEnumerable();
         var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var contract = await GetContract(instrument);
+        var contracts = await GetContracts(instrument);
 
-        await Task.FromResult(options);
+        response.Data = contracts.Data.Select(InternalMap.GetInstrument).ToList();
       }
       catch (Exception e)
       {
@@ -273,7 +273,7 @@ namespace InteractiveBrokers
         var instrument = screener.Instrument;
         var minDate = screener.MinDate?.ToString("yyyyMMdd HH:mm:ss");
         var maxDate = screener.MaxDate?.ToString("yyyyMMdd HH:mm:ss");
-        var contract = _contracts.Get(instrument.Name) ?? ExternalMap.GetContract(instrument);
+        var contract = GetContract(instrument);
         var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         void subscribe(HistoricalTicksMessage message)
@@ -353,24 +353,33 @@ namespace InteractiveBrokers
     }
 
     /// <summary>
+    /// Get or create contract based on instrument
+    /// </summary>
+    /// <param name="instrument"></param>
+    /// <returns></returns>
+    protected virtual Contract GetContract(InstrumentModel instrument)
+    {
+      return _contracts.Get(instrument.Name) ?? ExternalMap.GetContract(instrument);
+    }
+
+    /// <summary>
     /// Get contract definition
     /// </summary>
     /// <param name="instrument"></param>
     /// <param name="interval"></param>
     /// <returns></returns>
-    public virtual async Task<ResponseModel<Contract>> GetContract(InstrumentModel instrument, int interval = 0)
+    protected virtual async Task<ResponseModel<IList<Contract>>> GetContracts(InstrumentModel instrument, int interval = 0)
     {
       var id = _counter++;
-      var response = new ResponseModel<Contract>();
+      var response = new ResponseModel<IList<Contract>> { Data = [] };
       var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-      var contract = _contracts.Get(instrument.Name) ?? ExternalMap.GetContract(instrument);
+      var contract = GetContract(instrument);
 
       void subscribe(ContractDetailsMessage message)
       {
         if (Equals(id, message.RequestId))
         {
-          response.Data = message.ContractDetails.Contract;
-          unsubscribe(id);
+          response.Data.Add(message.ContractDetails.Contract);
         }
       }
 
@@ -459,7 +468,7 @@ namespace InteractiveBrokers
 
       foreach (var instrument in Account.Instruments.Values)
       {
-        _contracts[instrument.Name] = (await GetContract(instrument, 10)).Data ?? ExternalMap.GetContract(instrument);
+        _contracts[instrument.Name] = (await GetContracts(instrument, 10)).Data.FirstOrDefault() ?? GetContract(instrument);
       }
 
       response.Data = Account;
@@ -573,7 +582,7 @@ namespace InteractiveBrokers
       {
         if (Equals(id, message.RequestId))
         {
-          switch (ExternalMap.GetField(message.Field))
+          switch (ExternalMap.GetEnum<FieldCodeEnum>(message.Field))
           {
             case FieldCodeEnum.BidSize: point.BidSize = message.Data ?? point.BidSize; break;
             case FieldCodeEnum.AskSize: point.AskSize = message.Data ?? point.AskSize; break;
@@ -593,7 +602,7 @@ namespace InteractiveBrokers
         }
       }
 
-      var contract = _contracts.Get(instrument.Name) ?? ExternalMap.GetContract(instrument);
+      var contract = GetContract(instrument);
 
       _client.TickPrice += subscribe;
       _client.ClientSocket.reqMktData(id, contract, string.Empty, false, false, null);
@@ -646,9 +655,15 @@ namespace InteractiveBrokers
     /// <returns></returns>
     protected virtual async Task CreateRegister()
     {
-      var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+      var source = new TaskCompletionSource();
 
-      _client.NextValidId += o => source.TrySetResult();
+      void subscribe(int o)
+      {
+        _client.NextValidId -= subscribe;
+        source.TrySetResult();
+      }
+
+      _client.NextValidId += subscribe;
       _client.ClientSocket.reqIds(-1);
 
       await source.Task;
@@ -661,7 +676,6 @@ namespace InteractiveBrokers
     protected virtual Task<ResponseModel<EReader>> CreateReader()
     {
       var response = new ResponseModel<EReader>();
-      var scheduler = new ScheduleService();
       var signal = new EReaderMonitorSignal();
 
       _client = new IBClient(signal);
@@ -670,7 +684,7 @@ namespace InteractiveBrokers
 
       var reader = new EReader(_client.ClientSocket, signal);
 
-      scheduler.Send(() =>
+      var process = new Thread(() =>
       {
         while (_client.ClientSocket.IsConnected())
         {
@@ -679,12 +693,9 @@ namespace InteractiveBrokers
         }
       });
 
-      _connections.Add(scheduler);
-
+      process.Start();
       reader.Start();
       response.Data = reader;
-
-      while (_client.NextOrderId <= 0) ;
 
       return Task.FromResult(response);
     }
@@ -733,8 +744,8 @@ namespace InteractiveBrokers
       await await Task.WhenAny(source.Task, Task.Delay(Timeout));
 
       response.Data = order;
-      response.Data.Transaction.Id = $"{exResponse.OrderId}";
-      response.Data.Transaction.Status = InternalMap.GetOrderStatus(exResponse.OrderState.Status);
+      response.Data.Transaction.Id = $"{orderId}";
+      response.Data.Transaction.Status = InternalMap.GetOrderStatus(exResponse?.OrderState?.Status);
 
       return response;
     }

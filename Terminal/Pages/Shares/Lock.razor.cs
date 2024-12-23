@@ -138,15 +138,17 @@ namespace Terminal.Pages.Shares
       [
         new OrderModel
         {
+          Volume = amountX,
           Side = OrderSideEnum.Buy,
           Type = OrderTypeEnum.Market,
-          Transaction = new() { Volume = amountX, Instrument = instrumentX }
+          Transaction = new() { Instrument = instrumentX }
         },
         new OrderModel
         {
+          Volume = amountY,
           Side = OrderSideEnum.Sell,
           Type = OrderTypeEnum.Market,
-          Transaction = new() { Volume = amountY, Instrument = instrumentY }
+          Transaction = new() { Instrument = instrumentY }
         }
       ]);
     }

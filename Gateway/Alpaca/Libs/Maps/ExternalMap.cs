@@ -19,7 +19,7 @@ namespace Alpaca.Mappers
       var side = order.Side is OrderSideEnum.Buy ? OrderSide.Buy : OrderSide.Sell;
       var orderType = GetOrderType(order.Type);
       var duration = GetTimeSpan(order.TimeSpan);
-      var volume = OrderQuantity.Fractional((decimal)action.Volume);
+      var volume = OrderQuantity.Fractional((decimal)order.Volume);
       var exOrder = new NewOrderRequest(name, volume, side, orderType, duration);
       var braces = order
         .Orders

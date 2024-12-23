@@ -52,7 +52,7 @@ namespace Schwab.Mappers
         })
         .ToList();
 
-      if (order?.Transaction?.Volume is not 0)
+      if (order?.Volume is not 0)
       {
         message.OrderLegCollection.Add(GetSubOrder(order));
       }
@@ -91,14 +91,13 @@ namespace Schwab.Mappers
     {
       switch (instrument.Type)
       {
-        case InstrumentEnum.Shares: return "LEVELONE_EQUITIES";
         case InstrumentEnum.Futures: return "LEVELONE_FUTURES";
         case InstrumentEnum.Currencies: return "LEVELONE_FOREX";
         case InstrumentEnum.Options: return "LEVELONE_OPTIONS";
-        case InstrumentEnum.FuturesOptions: return "LEVELONE_FUTURES_OPTIONS";
+        case InstrumentEnum.FutureOptions: return "LEVELONE_FUTURES_OPTIONS";
       }
 
-      return null;
+      return "LEVELONE_EQUITIES";
     }
 
     /// <summary>
@@ -137,7 +136,7 @@ namespace Schwab.Mappers
       var response = new OrderLegMessage
       {
         Instrument = instrument,
-        Quantity = order.Transaction.Volume,
+        Quantity = order.Volume,
         Instruction = GetSide(assetType, side)
       };
 

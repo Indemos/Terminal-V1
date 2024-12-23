@@ -47,7 +47,7 @@ namespace Terminal.Pages.Options
 
       await OptionView.OnUpdate(point, 1, async options =>
       {
-        var strike = GetStrike(point, options, o => o.Derivative.Variable.Gamma ?? 0);
+        var strike = GetStrike(point, options, o => o.Derivative.Variance.Gamma ?? 0);
         var isSameStrike = Equals(Math.Round(point.Last.Value), Math.Round(strike.Key));
 
         if (account.Orders.Count is 0 && account.Positions.Count is 0)
@@ -148,9 +148,10 @@ namespace Terminal.Pages.Options
 
       var order = new OrderModel
       {
+        Volume = 1,
         Side = OrderSideEnum.Buy,
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Volume = 1, Instrument = nextOption }
+        Transaction = new() { Instrument = nextOption }
       };
 
       return order;
