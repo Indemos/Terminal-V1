@@ -96,24 +96,24 @@ namespace Terminal.Pages.Gateways
       var openOrders = account.Orders.Values.Where(o => Equals(o.Name, name));
       var openPositions = account.Positions.Values.Where(o => Equals(o.Name, name));
 
-      //if (openOrders.IsEmpty() && openPositions.IsEmpty())
-      //{
-      //  await OpenPositions(Instrument, 1);
-      //  await TradeService.Done(async () =>
-      //  {
-      //    var position = account
-      //      .Positions
-      //      .Values
-      //      .Where(o => Equals(o.BasisName ?? o.Name, name))
-      //      .FirstOrDefault();
+      if (openOrders.IsEmpty() && openPositions.IsEmpty())
+      {
+        await OpenPositions(Instrument, 1);
+        await TradeService.Done(async () =>
+        {
+          var position = account
+            .Positions
+            .Values
+            .Where(o => Equals(o.BasisName ?? o.Name, name))
+            .FirstOrDefault();
 
-      //    if (position is not null)
-      //    {
-      //      await ClosePositions(position.Name);
-      //    }
+          if (position is not null)
+          {
+            await ClosePositions(position.Name);
+          }
 
-      //  }, 10000);
-      //}
+        }, 10000);
+      }
 
       View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", View.ChartsView.GetShape<CandleShape>(point));
       View.ReportsView.UpdateItems(point.Time.Value.Ticks, "Performance", "Balance", new AreaShape { Y = account.Balance });
