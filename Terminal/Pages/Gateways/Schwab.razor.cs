@@ -106,15 +106,17 @@ namespace Terminal.Pages.Gateways
             .Positions
             .Values
             .Where(o => Equals(o.Name, name))
-            .First();
+            .FirstOrDefault();
 
-          await ClosePositions(name);
-          await OpenPositions(Instrument, position.Side is OrderSideEnum.Buy ? -1 : 1);
+          if (position is not null)
+          {
+            await ClosePositions(name);
+          }
 
         }, 10000);
       }
 
-      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", View.ChartsView.GetShape<BarShape>(point));
+      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", View.ChartsView.GetShape<CandleShape>(point));
       View.ReportsView.UpdateItems(point.Time.Value.Ticks, "Performance", "Balance", new AreaShape { Y = account.Balance });
       View.ReportsView.UpdateItems(point.Time.Value.Ticks, "Performance", "PnL", new LineShape { Y = performance.Point.Last });
       View.DealsView.UpdateItems(account.Deals);

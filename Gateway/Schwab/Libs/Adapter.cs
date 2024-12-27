@@ -175,7 +175,6 @@ namespace Schwab
       }
       catch (Exception e)
       {
-        response.Data = default;
         response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
       }
 
@@ -353,6 +352,8 @@ namespace Schwab
         }
       }
 
+      await GetAccount([]);
+
       return response;
     }
 
@@ -376,6 +377,8 @@ namespace Schwab
           response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
         }
       }
+
+      await GetAccount([]);
 
       return response;
     }
@@ -635,9 +638,9 @@ namespace Schwab
           }
 
           instrument.Name = instrumentName;
-          instrument.Point = point;
           instrument.Points.Add(point);
           instrument.PointGroups.Add(point, instrument.TimeFrame);
+          instrument.Point = instrument.PointGroups.Last();
 
           PointStream(new MessageModel<PointModel>
           {

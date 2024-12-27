@@ -9,7 +9,7 @@ namespace Derivative.Pages.Popups
 {
   public partial class OptionEditor : ComponentBase
   {
-    [CascadingParameter] MudDialogInstance Popup { get; set; }
+    [CascadingParameter] IMudDialogInstance Popup { get; set; }
 
     protected OptionInputModel InputModel { get; set; } = new OptionInputModel
     {

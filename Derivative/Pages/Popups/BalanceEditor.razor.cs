@@ -8,7 +8,7 @@ namespace Derivative.Pages.Popups
 {
   public partial class BalanceEditor : ComponentBase
   {
-    [CascadingParameter] MudDialogInstance Popup { get; set; }
+    [CascadingParameter] IMudDialogInstance Popup { get; set; }
 
     protected BalanceInputModel InputModel { get; set; } = new BalanceInputModel
     {

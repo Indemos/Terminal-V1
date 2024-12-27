@@ -13,12 +13,12 @@ namespace Terminal.Themes
 
       Typography = new Typography()
       {
-        Default = new Default()
+        Default = new DefaultTypography
         {
           FontFamily = ["Segoe UI", "SegoeUI", "Montserrat", "Helvetica Neue", "Helvetica", "Arial", "sans-serif"],
           FontSize = "1rem",
-          FontWeight = 300,
-          LineHeight = 1.5,
+          FontWeight = "300",
+          LineHeight = "1.5",
           LetterSpacing = "normal"
         }
       };

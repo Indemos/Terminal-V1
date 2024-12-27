@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
-using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 
 namespace InteractiveBrokers.Mappers
@@ -17,15 +16,14 @@ namespace InteractiveBrokers.Mappers
     /// </summary>
     /// <param name="orderId"></param>
     /// <param name="orderModel"></param>
-    /// <param name="contracts"></param>
     /// <returns></returns>
-    public static IList<OpenOrderMessage> GetOrders(int orderId, OrderModel orderModel, IDictionary<string, Contract> contracts)
+    public static IList<OpenOrderMessage> GetOrders(int orderId, OrderModel orderModel)
     {
       var response = new List<OpenOrderMessage>();
       var order = new Order();
       var action = orderModel.Transaction;
       var instrument = action.Instrument;
-      var contract = contracts.Get(instrument.Name) ?? GetContract(action.Instrument);
+      var contract = GetContract(action.Instrument);
 
       order.OrderId = orderId;
       order.Action = GetSide(orderModel.Side);
@@ -62,21 +60,22 @@ namespace InteractiveBrokers.Mappers
     /// <returns></returns>
     public static Contract GetContract(InstrumentModel instrument)
     {
-      if (int.TryParse(instrument.Id, out var id))
-      {
-        return new Contract { ConId = id };
-      }
-
       var basis = instrument.Basis;
       var derivative = instrument.Derivative;
       var contract = new Contract
       {
-        Symbol = basis?.Name,
-        LocalSymbol = instrument.Name,
-        Exchange = instrument.Exchange ?? "SMART",
+        Symbol = instrument.Name,
+        Exchange = instrument.Exchange,
         SecType = GetInstrumentType(instrument.Type),
-        Currency = instrument.Currency?.Name ?? nameof(CurrencyEnum.USD)
+        Currency = instrument.Currency?.Name ?? nameof(CurrencyEnum.USD),
+        ConId = int.TryParse(instrument.Id, out var id) ? id : 0
       };
+
+      if (Equals(instrument.Name, basis?.Name) is false)
+      {
+        contract.Symbol = basis?.Name;
+        contract.LocalSymbol = instrument.Name;
+      }
 
       if (derivative is not null)
       {

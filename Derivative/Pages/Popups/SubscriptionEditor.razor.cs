@@ -8,7 +8,7 @@ namespace Derivative.Pages.Popups
 {
   public partial class SubscriptionEditor : ComponentBase
   {
-    [CascadingParameter] MudDialogInstance Popup { get; set; }
+    [CascadingParameter] IMudDialogInstance Popup { get; set; }
 
     protected MapInputModel InputModel { get; set; } = new MapInputModel
     {

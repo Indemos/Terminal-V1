@@ -8,7 +8,7 @@ namespace Derivative.Pages.Popups
 {
   public partial class BarEditor : ComponentBase
   {
-    [CascadingParameter] MudDialogInstance Popup { get; set; }
+    [CascadingParameter] IMudDialogInstance Popup { get; set; }
 
     protected BarInputModel InputModel { get; set; } = new BarInputModel
     {

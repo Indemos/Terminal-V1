@@ -189,19 +189,19 @@ namespace InteractiveBrokers.Mappers
     /// Get instrument from contract
     /// </summary>
     /// <param name="contract"></param>
+    /// <param name="instrument"></param>
     /// <returns></returns>
-    public static InstrumentModel GetInstrument(Contract contract)
+    public static InstrumentModel GetInstrument(Contract contract, InstrumentModel instrument = null)
     {
       var expiration = contract.LastTradeDateOrContractMonth;
-      var response = new InstrumentModel
-      {
-        Id = $"{contract.ConId}",
-        Name = contract.LocalSymbol,
-        Exchange = contract.Exchange ?? "SMART",
-        Type = GetInstrumentType(contract.SecType),
-        Currency = new CurrencyModel { Name = contract.Currency },
-        Leverage = int.TryParse(contract.Multiplier, out var leverage) ? Math.Max(1, leverage) : 1
-      };
+      var response = instrument ?? new InstrumentModel();
+
+      response.Id = $"{contract.ConId}";
+      response.Name = contract.LocalSymbol;
+      response.Exchange = contract.Exchange;
+      response.Type = GetInstrumentType(contract.SecType);
+      response.Currency = new CurrencyModel { Name = contract.Currency };
+      response.Leverage = int.TryParse(contract.Multiplier, out var leverage) ? Math.Max(1, leverage) : 1;
 
       if (string.IsNullOrEmpty(contract.Symbol) is false)
       {

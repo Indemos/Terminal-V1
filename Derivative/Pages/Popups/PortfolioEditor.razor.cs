@@ -7,7 +7,7 @@ namespace Derivative.Pages.Popups
 {
   public partial class PortfolioEditor : ComponentBase
   {
-    [CascadingParameter] MudDialogInstance Popup { get; set; }
+    [CascadingParameter] IMudDialogInstance Popup { get; set; }
 
     protected PortfolioInputModel InputModel { get; set; } = new PortfolioInputModel
     {

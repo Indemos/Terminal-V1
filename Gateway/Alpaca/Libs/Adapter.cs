@@ -487,6 +487,8 @@ namespace Alpaca
         await _tradingClient.CancelOrderAsync(Guid.Parse(order.Transaction.Id));
       }
 
+      await GetAccount([]);
+
       return response;
     }
 
@@ -525,9 +527,9 @@ namespace Alpaca
         var point = InternalMap.GetPrice(streamPoint, instrument);
 
         instrument.Name = streamPoint.Symbol;
-        instrument.Point = point;
         instrument.Points.Add(point);
         instrument.PointGroups.Add(point, instrument.TimeFrame);
+        instrument.Point = instrument.PointGroups.Last();
 
         PointStream(new MessageModel<PointModel>
         {

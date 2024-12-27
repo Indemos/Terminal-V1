@@ -23,10 +23,11 @@ namespace Terminal.Pages.Gateways
     protected PerformanceIndicator Performance { get; set; }
     protected virtual InstrumentModel Instrument { get; set; } = new InstrumentModel
     {
-      Id = "495512557",
-      Name = "ES",
+      Name = "ESH5",
+      Exchange = "CME",
       Type = InstrumentEnum.Futures,
-      TimeFrame = TimeSpan.FromMinutes(1)
+      TimeFrame = TimeSpan.FromMinutes(1),
+      Basis = new InstrumentModel { Name = "ES" }
     };
 
     protected override async Task OnAfterRenderAsync(bool setup)
@@ -68,7 +69,8 @@ namespace Terminal.Pages.Gateways
 
       View.Adapters["Prime"] = new Adapter
       {
-        Account = account
+        Account = account,
+        Port = int.Parse(Configuration["InteractiveBrokers:Port"])
       };
 
       Performance = new PerformanceIndicator { Name = "Balance" };
@@ -94,24 +96,26 @@ namespace Terminal.Pages.Gateways
       var openOrders = account.Orders.Values.Where(o => Equals(o.Name, name));
       var openPositions = account.Positions.Values.Where(o => Equals(o.Name, name));
 
-      if (openOrders.IsEmpty() && openPositions.IsEmpty())
-      {
-        await OpenPositions(Instrument, 1);
-        await TradeService.Done(async () =>
-        {
-          var position = account
-            .Positions
-            .Values
-            .Where(o => Equals(o.Name, name))
-            .First();
+      //if (openOrders.IsEmpty() && openPositions.IsEmpty())
+      //{
+      //  await OpenPositions(Instrument, 1);
+      //  await TradeService.Done(async () =>
+      //  {
+      //    var position = account
+      //      .Positions
+      //      .Values
+      //      .Where(o => Equals(o.BasisName ?? o.Name, name))
+      //      .FirstOrDefault();
 
-          await ClosePositions(name);
-          await OpenPositions(Instrument, position.Side is OrderSideEnum.Buy ? -1 : 1);
+      //    if (position is not null)
+      //    {
+      //      await ClosePositions(position.Name);
+      //    }
 
-        }, 10000);
-      }
+      //  }, 10000);
+      //}
 
-      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", View.ChartsView.GetShape<BarShape>(point));
+      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", View.ChartsView.GetShape<CandleShape>(point));
       View.ReportsView.UpdateItems(point.Time.Value.Ticks, "Performance", "Balance", new AreaShape { Y = account.Balance });
       View.ReportsView.UpdateItems(point.Time.Value.Ticks, "Performance", "PnL", new LineShape { Y = performance.Point.Last });
       View.DealsView.UpdateItems(account.Deals);

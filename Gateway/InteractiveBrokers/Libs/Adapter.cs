@@ -8,11 +8,10 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.Metrics;
-using System.Drawing;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
@@ -45,11 +44,6 @@ namespace InteractiveBrokers
     protected ConcurrentDictionary<string, int> _subscriptions;
 
     /// <summary>
-    /// Contracts
-    /// </summary>
-    protected ConcurrentDictionary<string, Contract> _contracts;
-
-    /// <summary>
     /// Timeout
     /// </summary>
     public virtual TimeSpan Timeout { get; set; }
@@ -76,7 +70,6 @@ namespace InteractiveBrokers
       _counter = 1;
       _connections = [];
       _subscriptions = new ConcurrentDictionary<string, int>();
-      _contracts = new ConcurrentDictionary<string, Contract>();
     }
 
     /// <summary>
@@ -97,7 +90,11 @@ namespace InteractiveBrokers
         SubscribeToStreams();
 
         await GetAccount([]);
-        await Task.WhenAll(Account.Instruments.Values.Select(Subscribe));
+
+        foreach (var instrument in Account.Instruments.Values)
+        {
+          await Subscribe(instrument);
+        }
 
         response.Data = StatusEnum.Success;
       }
@@ -123,19 +120,11 @@ namespace InteractiveBrokers
         await Unsubscribe(instrument);
 
         var id = _subscriptions[instrument.Name] = _counter++;
-        var contract = GetContract(instrument);
+        var contract = (await GetContracts(instrument, 10)).Data.First();
 
-        SubscribeToPoints(id, instrument, point =>
-        {
-          point.Time ??= DateTime.Now;
-          point.Instrument = instrument;
+        instrument = InternalMap.GetInstrument(contract, instrument);
 
-          instrument.Point = point;
-          instrument.Points.Add(point);
-          instrument.PointGroups.Add(point, instrument.TimeFrame);
-
-          PointStream(new MessageModel<PointModel> { Next = instrument.PointGroups.Last() });
-        });
+        SubscribeToPoints(id, instrument);
 
         response.Data = StatusEnum.Success;
       }
@@ -214,7 +203,10 @@ namespace InteractiveBrokers
         var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var contracts = await GetContracts(instrument);
 
-        response.Data = contracts.Data.Select(InternalMap.GetInstrument).ToList();
+        response.Data = contracts
+          .Data
+          .Select(o => InternalMap.GetInstrument(o))
+          .ToList();
       }
       catch (Exception e)
       {
@@ -273,7 +265,7 @@ namespace InteractiveBrokers
         var instrument = screener.Instrument;
         var minDate = screener.MinDate?.ToString("yyyyMMdd HH:mm:ss");
         var maxDate = screener.MaxDate?.ToString("yyyyMMdd HH:mm:ss");
-        var contract = GetContract(instrument);
+        var contract = ExternalMap.GetContract(instrument);
         var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         void subscribe(HistoricalTicksMessage message)
@@ -349,17 +341,9 @@ namespace InteractiveBrokers
         response.Data.Add((await DeleteOrder(order)).Data);
       }
 
-      return response;
-    }
+      await GetAccount([]);
 
-    /// <summary>
-    /// Get or create contract based on instrument
-    /// </summary>
-    /// <param name="instrument"></param>
-    /// <returns></returns>
-    protected virtual Contract GetContract(InstrumentModel instrument)
-    {
-      return _contracts.Get(instrument.Name) ?? ExternalMap.GetContract(instrument);
+      return response;
     }
 
     /// <summary>
@@ -373,7 +357,7 @@ namespace InteractiveBrokers
       var id = _counter++;
       var response = new ResponseModel<IList<Contract>> { Data = [] };
       var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-      var contract = GetContract(instrument);
+      var contract = ExternalMap.GetContract(instrument);
 
       void subscribe(ContractDetailsMessage message)
       {
@@ -465,11 +449,6 @@ namespace InteractiveBrokers
         .Values
         .Where(o => Account.Instruments.ContainsKey(o.Name) is false)
         .ForEach(o => Account.Instruments[o.Name] = o.Transaction.Instrument);
-
-      foreach (var instrument in Account.Instruments.Values)
-      {
-        _contracts[instrument.Name] = (await GetContracts(instrument, 10)).Data.FirstOrDefault() ?? GetContract(instrument);
-      }
 
       response.Data = Account;
 
@@ -568,17 +547,20 @@ namespace InteractiveBrokers
       return response;
     }
 
+    Dictionary<string, PointModel> pointMap = new();
+
     /// <summary>
     /// Get latest quote
     /// </summary>
-    /// <param name="screener"></param>
-    /// <param name="action"></param>
+    /// <param name="id"></param>
+    /// <param name="instrument"></param>
     /// <returns></returns>
-    protected virtual void SubscribeToPoints(int id, InstrumentModel instrument, Action<PointModel> action)
+    protected virtual void SubscribeToPoints(int id, InstrumentModel instrument)
     {
       var point = new PointModel();
+      var contract = ExternalMap.GetContract(instrument);
 
-      void subscribe(TickPriceMessage message)
+      _client.TickPrice += message =>
       {
         if (Equals(id, message.RequestId))
         {
@@ -591,6 +573,10 @@ namespace InteractiveBrokers
             case FieldCodeEnum.LastPrice: point.Last = message.Data ?? point.Last; break;
           }
 
+          point.Last ??= point.Bid ?? point.Ask;
+          point.Bid ??= point.Last;
+          point.Ask ??= point.Last;
+
           if (point.Bid is null || point.Ask is null || point.Last is null)
           {
             return;
@@ -598,13 +584,15 @@ namespace InteractiveBrokers
 
           point.Time = DateTime.Now;
           point.Instrument = instrument;
-          action(point);
+
+          instrument.Points.Add(point);
+          instrument.PointGroups.Add(point, instrument.TimeFrame);
+          instrument.Point = instrument.PointGroups.Last();
+
+          PointStream(new MessageModel<PointModel> { Next = instrument.PointGroups.Last() });
         }
-      }
+      };
 
-      var contract = GetContract(instrument);
-
-      _client.TickPrice += subscribe;
       _client.ClientSocket.reqMktData(id, contract, string.Empty, false, false, null);
     }
 
@@ -714,7 +702,7 @@ namespace InteractiveBrokers
       var orderId = _client.NextOrderId++;
       var response = new ResponseModel<OrderModel>();
       var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-      var exOrders = ExternalMap.GetOrders(orderId, order, _contracts);
+      var exOrders = ExternalMap.GetOrders(orderId, order);
       var exResponse = null as OpenOrderMessage;
 
       void subscribe(OpenOrderMessage message)
