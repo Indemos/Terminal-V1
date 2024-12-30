@@ -20,8 +20,8 @@ namespace SchwabSignIn.Controllers
     public async Task<ActionResult<string>> Get(string code)
     {
       var url = "https://api.schwabapi.com/v1/oauth/token";
-      var clientId = $"{Configuration["Schwab:ClientId"]}";
-      var clientSecret = $"{Configuration["Schwab:ClientSecret"]}";
+      var clientId = $"{Configuration["Schwab:ConsumerKey"]}";
+      var clientSecret = $"{Configuration["Schwab:ConsumerSecret"]}";
 
       if (string.IsNullOrEmpty(code))
       {
@@ -60,8 +60,8 @@ namespace SchwabSignIn.Controllers
     [Route("signin")]
     public ActionResult SignIn()
     {
-      var clientId = $"{Configuration["Schwab:ClientId"]}";
-      var clientSecret = $"{Configuration["Schwab:ClientSecret"]}";
+      var clientId = $"{Configuration["Schwab:ConsumerKey"]}";
+      var clientSecret = $"{Configuration["Schwab:ConsumerSecret"]}";
       var query = HttpUtility.ParseQueryString(string.Empty);
 
       query.Add("response_type", "code");

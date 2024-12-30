@@ -261,11 +261,12 @@ namespace Schwab.Mappers
         Last = price
       };
 
+      var instrumentType = GetInstrumentType(message.Instrument.AssetType);
       var instrument = new InstrumentModel
       {
         Point = point,
         Name = message.Instrument.Symbol,
-        Type = GetInstrumentType(message.Instrument.AssetType)
+        Type = instrumentType
       };
 
       var action = new TransactionModel
@@ -367,6 +368,7 @@ namespace Schwab.Mappers
 
         foreach (var subOrder in subOrders)
         {
+          var instrumentType = GetInstrumentType(subOrder.Instrument.AssetType);
           var subInstrument = new InstrumentModel
           {
             Name = subOrder.Instrument.Symbol

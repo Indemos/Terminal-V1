@@ -40,9 +40,6 @@ namespace Alpaca.Mappers
     /// <returns></returns>
     public static InstrumentModel GetOption(OptionChainRequest screener, IOptionSnapshot message, string name)
     {
-      var strikePrice = name.Substring(name.Length - 8);
-      var optionType = name.Substring(name.Length - 9, 1);
-      var expirationDate = name.Substring(name.Length - 15, 6);
       var o = message.Quote;
       var point = new PointModel
       {
@@ -53,14 +50,6 @@ namespace Alpaca.Mappers
         BidSize = (double)o.BidSize
       };
 
-      var expiration = DateTime.ParseExact(expirationDate, "yyMMdd", null);
-      var derivative = new DerivativeModel
-      {
-        Strike = int.Parse(strikePrice) / 1000,
-        ExpirationDate = expiration,
-        TradeDate = expiration
-      };
-
       var basis = new InstrumentModel
       {
         Name = screener.UnderlyingSymbol
@@ -69,7 +58,7 @@ namespace Alpaca.Mappers
       var option = new InstrumentModel
       {
         Point = point,
-        Derivative = derivative,
+        Derivative = GetDerivative(name),
         Name = name
       };
 
@@ -285,6 +274,33 @@ namespace Alpaca.Mappers
       }
 
       return null;
+    }
+
+    /// <summary>
+    /// Get derivative model based on option name
+    /// </summary>
+    /// <param name="name"></param>
+    /// <returns></returns>
+    public static DerivativeModel GetDerivative(string name)
+    {
+      var strike = name.Substring(name.Length - 8);
+      var side = name.Substring(name.Length - 9, 1);
+      var expiration = name.Substring(name.Length - 15, 6);
+      var expirationDate = DateTime.ParseExact(expiration, "yyMMdd", null);
+      var derivative = new DerivativeModel
+      {
+        Strike = int.Parse(strike) / 1000,
+        ExpirationDate = expirationDate,
+        TradeDate = expirationDate
+      };
+
+      switch (side?.ToUpper())
+      {
+        case "P": derivative.Side = OptionSideEnum.Put; break;
+        case "C": derivative.Side = OptionSideEnum.Call; break;
+      }
+
+      return derivative;
     }
 
     /// <summary>

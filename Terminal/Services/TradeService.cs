@@ -21,11 +21,11 @@ namespace Terminal.Services
     public static double GetDelta(OrderModel o)
     {
       var volume = o.Volume;
-      var leverage = o.Transaction?.Instrument?.Leverage;
+      var units = o.Transaction?.Instrument?.Leverage;
       var delta = o.Transaction?.Instrument?.Derivative?.Variance?.Delta;
       var side = o.Side is OrderSideEnum.Buy ? 1.0 : -1.0;
 
-      return ((delta ?? volume) * leverage * side) ?? 0;
+      return ((delta ?? volume) * units * side) ?? 0;
     }
 
     /// <summary>

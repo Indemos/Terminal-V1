@@ -7,9 +7,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics.Metrics;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
@@ -49,6 +47,11 @@ namespace InteractiveBrokers
     public virtual TimeSpan Timeout { get; set; }
 
     /// <summary>
+    /// Timeout
+    /// </summary>
+    public virtual int Span { get; set; }
+
+    /// <summary>
     /// Host
     /// </summary>
     public virtual string Host { get; set; }
@@ -65,7 +68,8 @@ namespace InteractiveBrokers
     {
       Port = 7497;
       Host = "127.0.0.1";
-      Timeout = TimeSpan.FromSeconds(5);
+      Span = 15;
+      Timeout = TimeSpan.FromSeconds(10);
 
       _counter = 1;
       _connections = [];
@@ -120,11 +124,10 @@ namespace InteractiveBrokers
         await Unsubscribe(instrument);
 
         var id = _subscriptions[instrument.Name] = _counter++;
-        var contract = (await GetContracts(instrument, 10)).Data.First();
+        var contracts = await GetContracts(instrument, Span);
+        var contract = contracts.Data.First();
 
-        instrument = InternalMap.GetInstrument(contract, instrument);
-
-        SubscribeToPoints(id, instrument);
+        await SubscribeToPoints(id, InternalMap.GetInstrument(contract, instrument), Span);
 
         response.Data = StatusEnum.Success;
       }
@@ -201,7 +204,7 @@ namespace InteractiveBrokers
         var id = _counter++;
         var instrument = screener.Instrument;
         var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var contracts = await GetContracts(instrument);
+        var contracts = await GetContracts(instrument, Span);
 
         response.Data = contracts
           .Data
@@ -554,13 +557,35 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="id"></param>
     /// <param name="instrument"></param>
+    /// <param name="interval"></param>
     /// <returns></returns>
-    protected virtual void SubscribeToPoints(int id, InstrumentModel instrument)
+    protected virtual async Task SubscribeToPoints(int id, InstrumentModel instrument, int interval)
     {
+      var max = short.MaxValue;
       var point = new PointModel();
       var contract = ExternalMap.GetContract(instrument);
 
-      _client.TickPrice += message =>
+      double? value(double o, double min, double max, double? cache) => o >= min && o <= max ? o : cache;
+
+      void subscribeToComs(TickOptionMessage message)
+      {
+        if (Equals(id, message.RequestId))
+        {
+          instrument.Derivative ??= new DerivativeModel();
+          instrument.Derivative.Sigma = value(message.ImpliedVolatility, 0, max, message.ImpliedVolatility);
+
+          var variance = instrument.Derivative.Variance ??= new VarianceModel();
+
+          variance.Delta = value(message.Delta, -2, 2, variance.Delta) ?? 0;
+          variance.Gamma = value(message.Gamma, 0, max, variance.Gamma) ?? 0;
+          variance.Theta = value(message.Theta, 0, max, variance.Theta) ?? 0;
+          variance.Vega = value(message.Vega, 0, max, variance.Vega) ?? 0;
+
+          Console.WriteLine($"Greeks: {variance.Gamma} : {variance.Delta} : {variance.Theta} : {instrument.Derivative.Sigma}");
+        }
+      }
+
+      void subscribeToPrices(TickPriceMessage message)
       {
         if (Equals(id, message.RequestId))
         {
@@ -573,7 +598,7 @@ namespace InteractiveBrokers
             case FieldCodeEnum.LastPrice: point.Last = message.Data ?? point.Last; break;
           }
 
-          point.Last ??= point.Bid ?? point.Ask;
+          point.Last = point.Last is 0 or null ? point.Bid ?? point.Ask : point.Last;
           point.Bid ??= point.Last;
           point.Ask ??= point.Last;
 
@@ -591,9 +616,13 @@ namespace InteractiveBrokers
 
           PointStream(new MessageModel<PointModel> { Next = instrument.PointGroups.Last() });
         }
-      };
+      }
 
+      _client.TickPrice += subscribeToPrices;
+      _client.TickOptionCommunication += subscribeToComs;
       _client.ClientSocket.reqMktData(id, contract, string.Empty, false, false, null);
+
+      await Task.Delay(interval);
     }
 
     /// <summary>
@@ -654,7 +683,7 @@ namespace InteractiveBrokers
       _client.NextValidId += subscribe;
       _client.ClientSocket.reqIds(-1);
 
-      await source.Task;
+      await await Task.WhenAny(source.Task, Task.Delay(Timeout));
     }
 
     /// <summary>

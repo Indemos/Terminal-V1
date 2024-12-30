@@ -575,7 +575,8 @@ namespace Schwab
       var adminCode = adminResponse.Response.FirstOrDefault().Content.Code;
       var pointMap = Account
         .Instruments
-        .ToDictionary(o => o.Key, o => new PointModel());
+        .Values
+        .ToDictionary(o => o.Name, o => new PointModel());
 
       scheduler.Send(async () =>
       {
@@ -631,6 +632,10 @@ namespace Schwab
           point.BidSize = InternalMap.GetValue($"{data.Get(map.Get("Bid Size"))}", point.BidSize);
           point.AskSize = InternalMap.GetValue($"{data.Get(map.Get("Ask Size"))}", point.AskSize);
           point.Last = InternalMap.GetValue($"{data.Get(map.Get("Last Price"))}", point.Last);
+
+          point.Last = point.Last is 0 or null ? point.Bid ?? point.Ask : point.Last;
+          point.Bid ??= point.Last;
+          point.Ask ??= point.Last;
 
           if (point.Bid is null || point.Ask is null || point.Last is null)
           {

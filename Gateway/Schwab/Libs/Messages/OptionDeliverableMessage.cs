@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace Schwab.Messages
@@ -13,7 +11,7 @@ namespace Schwab.Messages
     public string AssetType { get; set; }
     
     [JsonPropertyName("deliverableUnits")]
-    public string DeliverableUnits { get; set; }
+    public double DeliverableUnits { get; set; }
     
     [JsonPropertyName("currencyType")]
     public string CurrencyType { get; set; }

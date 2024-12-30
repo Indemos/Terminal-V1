@@ -1,5 +1,6 @@
 namespace Schwab.Messages
 {
+  using System.Collections.Generic;
   using System.Text.Json.Serialization;
 
   public partial class InstrumentMessage
@@ -39,5 +40,9 @@ namespace Schwab.Messages
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [JsonPropertyName("instrumentId")]
     public string InstrumentId { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonPropertyName("optionDeliverables")]
+    public List<OptionDeliverableMessage> OptionDeliverables { get; set; }
   }
 }
