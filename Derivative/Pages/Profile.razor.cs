@@ -124,7 +124,6 @@ namespace Derivative.Pages
         Space = 0.05,
         Name = inputModel.Name,
         Items = chartPoints,
-        View = view,
         ShowIndex = o => $"{chartPoints.ElementAtOrDefault((int)o)?.X}"
       };
 

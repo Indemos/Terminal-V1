@@ -331,6 +331,11 @@ namespace Alpaca
           step = string.IsNullOrEmpty(inputs.Pagination.Token) ? pages : step;
         }
 
+        items = items
+          .OrderBy(o => o.Derivative.ExpirationDate)
+          .ThenBy(o => o.Derivative.Strike)
+          .ThenBy(o => o.Derivative.Side);
+
         response.Data = [.. items];
       }
       catch (Exception e)
@@ -531,10 +536,7 @@ namespace Alpaca
         instrument.PointGroups.Add(point, instrument.TimeFrame);
         instrument.Point = instrument.PointGroups.Last();
 
-        PointStream(new MessageModel<PointModel>
-        {
-          Next = instrument.PointGroups.Last()
-        });
+        PointStream(new MessageModel<PointModel> { Next = instrument.Point });
       });
     }
 

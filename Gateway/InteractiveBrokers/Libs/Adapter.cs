@@ -206,10 +206,12 @@ namespace InteractiveBrokers
         var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var contracts = await GetContracts(instrument, Span);
 
-        response.Data = contracts
+        response.Data = [.. contracts
           .Data
           .Select(o => InternalMap.GetInstrument(o))
-          .ToList();
+          .OrderBy(o => o.Derivative.ExpirationDate)
+          .ThenBy(o => o.Derivative.Strike)
+          .ThenBy(o => o.Derivative.Side)];
       }
       catch (Exception e)
       {
@@ -267,7 +269,7 @@ namespace InteractiveBrokers
         var count = screener.Count ?? 1;
         var instrument = screener.Instrument;
         var minDate = screener.MinDate?.ToString("yyyyMMdd HH:mm:ss");
-        var maxDate = screener.MaxDate?.ToString("yyyyMMdd HH:mm:ss");
+        var maxDate = (screener.MaxDate ?? DateTime.Now).ToString("yyyyMMdd HH:mm:ss");
         var contract = ExternalMap.GetContract(instrument);
         var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -289,7 +291,7 @@ namespace InteractiveBrokers
         _client.historicalTicksList += subscribe;
         _client.ClientSocket.reqHistoricalTicks(id, contract, minDate, maxDate, count, "BID_ASK", 1, true, null);
 
-        await await Task.WhenAny(source.Task, Task.Delay(Timeout));
+        await source.Task.ContinueWith(o => unsubscribe());
       }
       catch (Exception e)
       {
@@ -382,7 +384,7 @@ namespace InteractiveBrokers
       _client.ContractDetailsEnd += unsubscribe;
       _client.ClientSocket.reqContractDetails(id, contract);
 
-      await await Task.WhenAny(source.Task, Task.Delay(Timeout));
+      await await Task.WhenAny(source.Task, Task.Delay(Timeout).ContinueWith(o => unsubscribe(id)));
       await Task.Delay(interval);
 
       return response;
@@ -493,7 +495,7 @@ namespace InteractiveBrokers
         _client.OpenOrderEnd += unsubscribe;
         _client.ClientSocket.reqAllOpenOrders();
 
-        await await Task.WhenAny(source.Task, Task.Delay(Timeout));
+        await source.Task.ContinueWith(o => unsubscribe());
       }
       catch (Exception e)
       {
@@ -540,7 +542,7 @@ namespace InteractiveBrokers
         _client.PositionMultiEnd += unsubscribe;
         _client.ClientSocket.reqPositionsMulti(id, Account.Descriptor, string.Empty);
 
-        await await Task.WhenAny(source.Task, Task.Delay(Timeout));
+        await source.Task.ContinueWith(o => unsubscribe(id));
       }
       catch (Exception e)
       {
@@ -565,23 +567,32 @@ namespace InteractiveBrokers
       var point = new PointModel();
       var contract = ExternalMap.GetContract(instrument);
 
-      double? value(double o, double min, double max, double? cache) => o >= min && o <= max ? o : cache;
+      double? value(double data, double min, double max, double? original)
+      {
+        switch (true)
+        {
+          case true when data < short.MinValue:
+          case true when data > short.MaxValue:
+          case true when data < min:
+          case true when data > max: return original;
+        }
+
+        return Math.Round(data, 2);
+      }
 
       void subscribeToComs(TickOptionMessage message)
       {
         if (Equals(id, message.RequestId))
         {
           instrument.Derivative ??= new DerivativeModel();
-          instrument.Derivative.Sigma = value(message.ImpliedVolatility, 0, max, message.ImpliedVolatility);
+          instrument.Derivative.Sigma = value(message.ImpliedVolatility, 0, max, instrument.Derivative.Sigma);
 
           var variance = instrument.Derivative.Variance ??= new VarianceModel();
 
-          variance.Delta = value(message.Delta, -2, 2, variance.Delta) ?? 0;
-          variance.Gamma = value(message.Gamma, 0, max, variance.Gamma) ?? 0;
-          variance.Theta = value(message.Theta, 0, max, variance.Theta) ?? 0;
-          variance.Vega = value(message.Vega, 0, max, variance.Vega) ?? 0;
-
-          Console.WriteLine($"Greeks: {variance.Gamma} : {variance.Delta} : {variance.Theta} : {instrument.Derivative.Sigma}");
+          variance.Delta = value(message.Delta, -1, 1, variance.Delta);
+          variance.Gamma = value(message.Gamma, 0, max, variance.Gamma);
+          variance.Theta = value(message.Theta, 0, max, variance.Theta);
+          variance.Vega = value(message.Vega, 0, max, variance.Vega);
         }
       }
 
@@ -614,7 +625,7 @@ namespace InteractiveBrokers
           instrument.PointGroups.Add(point, instrument.TimeFrame);
           instrument.Point = instrument.PointGroups.Last();
 
-          PointStream(new MessageModel<PointModel> { Next = instrument.PointGroups.Last() });
+          PointStream(new MessageModel<PointModel> { Next = instrument.Point });
         }
       }
 
@@ -646,7 +657,7 @@ namespace InteractiveBrokers
 
       void unsubscribe(AccountSummaryEndMessage message)
       {
-        if (Equals(id, message.RequestId))
+        if (Equals(id, message?.RequestId))
         {
           _client.AccountSummary -= subscribe;
           _client.AccountSummaryEnd -= unsubscribe;
@@ -659,7 +670,7 @@ namespace InteractiveBrokers
       _client.AccountSummaryEnd += unsubscribe;
       _client.ClientSocket.reqAccountSummary(id, "All", AccountSummaryTags.GetAllTags());
 
-      await await Task.WhenAny(source.Task, Task.Delay(Timeout));
+      await source.Task.ContinueWith(o => unsubscribe(null));
 
       response.Data = Account;
 
@@ -731,7 +742,7 @@ namespace InteractiveBrokers
       var orderId = _client.NextOrderId++;
       var response = new ResponseModel<OrderModel>();
       var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-      var exOrders = ExternalMap.GetOrders(orderId, order);
+      var exOrders = ExternalMap.GetOrders(orderId, order, Account);
       var exResponse = null as OpenOrderMessage;
 
       void subscribe(OpenOrderMessage message)
@@ -758,7 +769,7 @@ namespace InteractiveBrokers
         _client.ClientSocket.placeOrder(exOrder.Order.OrderId, exOrder.Contract, exOrder.Order);
       }
 
-      await await Task.WhenAny(source.Task, Task.Delay(Timeout));
+      await source.Task.ContinueWith(o => unsubscribe());
 
       response.Data = order;
       response.Data.Transaction.Id = $"{orderId}";
@@ -797,7 +808,7 @@ namespace InteractiveBrokers
       _client.OrderStatus += subscribe;
       _client.ClientSocket.cancelOrder(orderId, string.Empty);
 
-      await await Task.WhenAny(source.Task, Task.Delay(Timeout));
+      await source.Task.ContinueWith(o => unsubscribe());
 
       response.Data = order;
       response.Data.Transaction.Id = $"{orderId}";

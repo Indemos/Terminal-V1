@@ -247,6 +247,9 @@ namespace Schwab
           ?.Concat(optionResponse.Data.CallExpDateMap)
           ?.SelectMany(dateMap => dateMap.Value.SelectMany(o => o.Value))
           ?.Select(option => InternalMap.GetOption(option, optionResponse.Data))
+          ?.OrderBy(o => o.Derivative.ExpirationDate)
+          ?.ThenBy(o => o.Derivative.Strike)
+          ?.ThenBy(o => o.Derivative.Side)
           ?.ToList() ?? [];
       }
       catch (Exception e)
@@ -311,8 +314,7 @@ namespace Schwab
           ["periodType"] = "day",
           ["period"] = 1,
           ["frequencyType"] = "minute",
-          ["frequency"] = 1,
-          ["symbol"] = screener.Instrument.Name
+          ["frequency"] = 1
 
         }.Merge(criteria);
 
@@ -647,10 +649,7 @@ namespace Schwab
           instrument.PointGroups.Add(point, instrument.TimeFrame);
           instrument.Point = instrument.PointGroups.Last();
 
-          PointStream(new MessageModel<PointModel>
-          {
-            Next = instrument.PointGroups.Last()
-          });
+          PointStream(new MessageModel<PointModel> { Next = instrument.Point });
         }
       }
     }

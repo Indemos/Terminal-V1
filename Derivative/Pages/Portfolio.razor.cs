@@ -166,8 +166,7 @@ namespace Derivative.Pages
       var composer = new Composer
       {
         Name = "Demo",
-        Items = chartPoints,
-        View = view
+        Items = chartPoints
       };
 
       await view.Create<CanvasEngine>(() => composer);

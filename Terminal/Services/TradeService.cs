@@ -68,15 +68,7 @@ namespace Terminal.Services
         Point = point
       };
 
-      var options = await adapter.GetOptions(screener, []);
-      var nextOptions = options
-        .Data
-        .OrderBy(o => o.Derivative.ExpirationDate)
-        .ThenBy(o => o.Derivative.Strike)
-        .ThenBy(o => o.Derivative.Side)
-        .ToList();
-
-      return nextOptions;
+      return (await adapter.GetOptions(screener, [])).Data;
     }
 
     /// <summary>

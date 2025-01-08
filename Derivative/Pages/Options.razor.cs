@@ -8,20 +8,19 @@ using Canvas.Views.Web.Views;
 using Derivative.Models;
 using Derivative.Pages.Popups;
 using Derivative.Services;
+using Distribution.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using MudBlazor;
-using Schwab;
 using SkiaSharp;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Timers;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
-using Terminal.Core.Models;
 
 namespace Derivative.Pages
 {
@@ -34,6 +33,7 @@ namespace Derivative.Pages
 
     protected int Count { get; set; } = 1;
     protected bool IsLoading { get; set; }
+    protected List<IDisposable> Subscriptions { get; set; } = [];
     protected Dictionary<string, Dictionary<string, CanvasView>> Groups { get; set; } = [];
 
     /// <summary>
@@ -56,8 +56,11 @@ namespace Derivative.Pages
     /// </summary>
     public void OnClear()
     {
+      Subscriptions.ForEach(o => o.Dispose());
+
       Count = 1;
       Groups.Clear();
+      Subscriptions.Clear();
     }
 
     /// <summary>
@@ -207,49 +210,23 @@ namespace Derivative.Pages
           {
             dynamic data = response.Data;
 
-            var adapter = new Adapter
-            {
-              Account = new Account
-              {
-                Descriptor = Configuration.GetValue<string>("Schwab:Account")
-              },
-              AccessToken = Configuration["Schwab:AccessToken"],
-              RefreshToken = Configuration["Schwab:RefreshToken"],
-              ClientId = Configuration["Schwab:ConsumerKey"],
-              ClientSecret = Configuration["Schwab:ConsumerSecret"]
-            };
-
             var caption = $"{Count++} : {data.Name} : {data.Range.Start:yyyy-MM-dd} : {data.Range.End:yyyy-MM-dd}";
+            var interval = new Timer(TimeSpan.FromSeconds(10));
+            var scheduler = InstanceService<ScheduleService>.Instance;
+            var options = await DataService.GetOptions(data.Name, data.Range.Start, data.Range.End);
 
-            if (DataService.Options.TryGetValue($"{data.Name}", out var items) && items is not null)
+            await action(caption, data, options);
+
+            interval.Enabled = true;
+            interval.AutoReset = false;
+            interval.Elapsed += (sender, e) => scheduler.Send(async () =>
             {
-              var rangeItems = items.Where(o =>
-              {
-                var min = o.Derivative.ExpirationDate.Value.Date >= data.Range.Start.Date;
-                var max = o.Derivative.ExpirationDate.Value.Date <= data.Range.End.Date;
+              var options = await DataService.GetOptions(data.Name, data.Range.Start, data.Range.End);
+              await action(caption, data, options);
+              interval.Enabled = true;
+            });
 
-                return min && max;
-
-              }).ToList();
-
-              await action(caption, data, rangeItems);
-            }
-            else
-            {
-              await adapter.Connect();
-
-              var options = await adapter.GetOptions(new OptionScreenerModel(), new Hashtable
-              {
-                ["strikeCount"] = 100,
-                ["symbol"] = data.Name?.ToUpper(),
-                ["fromDate"] = $"{data.Range.Start:yyyy-MM-dd}",
-                ["toDate"] = $"{data.Range.End:yyyy-MM-dd}"
-              });
-
-              await action(caption, data, options.Data);
-
-              DataService.Assets.Add(data.Name);
-            }
+            Subscriptions.Add(interval);
           }
 
           IsLoading = false;
@@ -317,8 +294,7 @@ namespace Derivative.Pages
         {
           Name = "Indicators",
           Items = points,
-          ShowIndex = showIndex,
-          View = view
+          ShowIndex = showIndex
         };
 
         await view.Create<CanvasEngine>(() => composer);
@@ -418,8 +394,7 @@ namespace Derivative.Pages
         {
           Name = "Indicators",
           Items = points,
-          ShowIndex = showIndex,
-          View = view
+          ShowIndex = showIndex
         };
 
         await view.Create<CanvasEngine>(() => composer);
@@ -500,10 +475,9 @@ namespace Derivative.Pages
           Name = "Indicators",
           Items = points,
           Range = points.Max(o => o.Points.Count),
-          ValueCount = Math.Min(expirations.Count, 5),
+          Values = Math.Min(expirations.Count, 5),
           ShowIndex = showIndex,
-          ShowValue = showValue,
-          View = view
+          ShowValue = showValue
         };
 
         await view.Create<CanvasEngine>(() => composer);

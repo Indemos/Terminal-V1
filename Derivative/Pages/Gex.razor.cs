@@ -134,8 +134,7 @@ namespace Derivative.Pages
       var composer = section.View.Composer = new Composer
       {
         Items = [],
-        Name = "Demo",
-        View = section.View
+        Name = "Demo"
       };
 
       await section.View.Create<CanvasEngine>(() => composer);
@@ -168,8 +167,13 @@ namespace Derivative.Pages
 
       var point = new PointModel
       {
+        Time = DateTime.Now,
         Last = options.Data.Sum(o => Compute(inputModel.Expression, o)),
-        Time = DateTime.Now
+        Instrument = new InstrumentModel
+        {
+          Name = inputModel.Name,
+          TimeFrame = TimeSpan.FromMinutes(1)
+        }
       };
 
       items.Add(point, point.Instrument.TimeFrame);
@@ -207,9 +211,11 @@ namespace Derivative.Pages
       try
       {
         ce.Variables["Volume"] = option.Point.Volume;
-        ce.Variables["Volatility"] = o.Sigma;
+        ce.Variables["Sigma"] = o.Sigma;
         ce.Variables["OpenInterest"] = o.OpenInterest;
         ce.Variables["IntrinsicValue"] = o.IntrinsicValue;
+        ce.Variables["Bid"] = option.Point.Bid;
+        ce.Variables["Ask"] = option.Point.Ask;
         ce.Variables["BidSize"] = option.Point.BidSize;
         ce.Variables["AskSize"] = option.Point.AskSize;
         ce.Variables["Vega"] = o.Variance.Vega;
@@ -220,9 +226,11 @@ namespace Derivative.Pages
         if (o.Side is OptionSideEnum.Put)
         {
           ce.Variables["PVolume"] = option.Point.Volume;
-          ce.Variables["PVolatility"] = o.Sigma;
+          ce.Variables["PSigma"] = o.Sigma;
           ce.Variables["POpenInterest"] = o.OpenInterest;
           ce.Variables["PIntrinsicValue"] = o.IntrinsicValue;
+          ce.Variables["PBid"] = option.Point.Bid;
+          ce.Variables["PAsk"] = option.Point.Ask;
           ce.Variables["PBidSize"] = option.Point.BidSize;
           ce.Variables["PAskSize"] = option.Point.AskSize;
           ce.Variables["PVega"] = o.Variance.Vega;
@@ -231,11 +239,13 @@ namespace Derivative.Pages
           ce.Variables["PDelta"] = o.Variance.Delta;
 
           ce.Variables["CVolume"] = 0.0;
-          ce.Variables["CVolatility"] = 0.0;
+          ce.Variables["CSigma"] = 0.0;
           ce.Variables["COpenInterest"] = 0.0;
           ce.Variables["CIntrinsicValue"] = 0.0;
           ce.Variables["CBidSize"] = 0.0;
           ce.Variables["CAskSize"] = 0.0;
+          ce.Variables["CBid"] = 0.0;
+          ce.Variables["CAsk"] = 0.0;
           ce.Variables["CVega"] = 0.0;
           ce.Variables["CGamma"] = 0.0;
           ce.Variables["CTheta"] = 0.0;
@@ -250,6 +260,8 @@ namespace Derivative.Pages
           ce.Variables["PIntrinsicValue"] = 0.0;
           ce.Variables["PBidSize"] = 0.0;
           ce.Variables["PAskSize"] = 0.0;
+          ce.Variables["PBid"] = 0.0;
+          ce.Variables["PAsk"] = 0.0;
           ce.Variables["PVega"] = 0.0;
           ce.Variables["PGamma"] = 0.0;
           ce.Variables["PTheta"] = 0.0;
@@ -261,6 +273,8 @@ namespace Derivative.Pages
           ce.Variables["CIntrinsicValue"] = o.IntrinsicValue;
           ce.Variables["CBidSize"] = option.Point.BidSize;
           ce.Variables["CAskSize"] = option.Point.AskSize;
+          ce.Variables["CBid"] = option.Point.Bid;
+          ce.Variables["CAsk"] = option.Point.Ask;
           ce.Variables["CVega"] = o.Variance.Vega;
           ce.Variables["CGamma"] = o.Variance.Gamma;
           ce.Variables["CTheta"] = o.Variance.Theta;

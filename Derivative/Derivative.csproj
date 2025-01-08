@@ -7,9 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Canvas.Views.Web" Version="5.5.0" />
     <PackageReference Include="alglib.net" Version="3.19.0" />
     <PackageReference Include="CalcEngine.Core" Version="1.0.0" />
-    <PackageReference Include="Canvas.Views.Web" Version="5.0.0" />
     <PackageReference Include="MathNet.Numerics" Version="6.0.0-beta1" />
     <PackageReference Include="Meta.Numerics" Version="4.1.4" />
     <PackageReference Include="MudBlazor" Version="8.0.0-preview.7" />

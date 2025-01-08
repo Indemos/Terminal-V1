@@ -548,7 +548,7 @@ namespace Simulation
 
       var response = new ResponseModel<IList<InstrumentModel>>
       {
-        Data = screener
+        Data = [.. screener
         .Point
         .Derivatives[nameof(InstrumentEnum.Options)]
         .Select(o =>
@@ -565,7 +565,9 @@ namespace Simulation
         .Where(o => screener?.MaxDate is null || o.Derivative.ExpirationDate?.Date <= screener.MaxDate?.Date)
         .Where(o => screener?.MinPrice is null || o.Derivative.Strike >= screener.MinPrice)
         .Where(o => screener?.MaxPrice is null || o.Derivative.Strike <= screener.MaxPrice)
-        .ToList()
+        .OrderBy(o => o.Derivative.ExpirationDate)
+        .ThenBy(o => o.Derivative.Strike)
+        .ThenBy(o => o.Derivative.Side)]
       };
 
       return Task.FromResult(response);

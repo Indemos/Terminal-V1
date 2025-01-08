@@ -16,8 +16,9 @@ namespace InteractiveBrokers.Mappers
     /// </summary>
     /// <param name="orderId"></param>
     /// <param name="orderModel"></param>
+    /// <param name="account"></param>
     /// <returns></returns>
-    public static IList<OpenOrderMessage> GetOrders(int orderId, OrderModel orderModel)
+    public static IList<OpenOrderMessage> GetOrders(int orderId, OrderModel orderModel, IAccount account)
     {
       var response = new List<OpenOrderMessage>();
       var order = new Order();
@@ -30,6 +31,8 @@ namespace InteractiveBrokers.Mappers
       order.Tif = GetTimeSpan(orderModel.TimeSpan);
       order.OrderType = GetOrderType(orderModel.Type);
       order.TotalQuantity = (decimal)orderModel.Volume;
+      order.ExtOperator = orderModel.Descriptor;
+      order.Account = account.Descriptor;
 
       switch (orderModel.Type)
       {
