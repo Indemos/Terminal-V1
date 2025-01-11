@@ -19,7 +19,7 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Size of partially filled contract
     /// </summary>
-    public virtual double? CurrentVolume { get; set; }
+    public virtual double? Volume { get; set; }
 
     /// <summary>
     /// Open price for the order

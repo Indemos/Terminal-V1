@@ -303,7 +303,7 @@ namespace Alpaca
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<InstrumentModel>>> GetOptions(OptionScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<InstrumentModel>>> GetOptions(InstrumentScreenerModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<InstrumentModel>>();
 
@@ -551,7 +551,7 @@ namespace Alpaca
         Id = $"{streamOrder.TradeId}",
         Time = streamOrder.TimestampUtc,
         Price = (double)streamOrder.Price,
-        CurrentVolume = (double)streamOrder.Size,
+        Volume = (double)streamOrder.Size,
         Instrument = new InstrumentModel { Name = streamOrder.Symbol }
       };
 

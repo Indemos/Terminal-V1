@@ -126,7 +126,7 @@ namespace Terminal.Tests
       Assert.Equal(position.Transaction.Status, OrderStatusEnum.Filled);
       Assert.Equal(position.Transaction.Id, order.Id);
       Assert.Equal(position.Volume, order.Volume);
-      Assert.Equal(position.Transaction.CurrentVolume, order.Volume);
+      Assert.Equal(position.Transaction.Volume, order.Volume);
       Assert.NotEmpty(position.Transaction.Id);
       Assert.NotNull(position.Volume);
     }
@@ -289,7 +289,7 @@ namespace Terminal.Tests
       Assert.Equal(openShare.TimeSpan, OrderTimeSpanEnum.Day);
       Assert.NotNull(openShare.Transaction.Time);
       Assert.Equal(openShare.Volume, 100);
-      Assert.Equal(openShare.Transaction.CurrentVolume, openShare.Volume);
+      Assert.Equal(openShare.Transaction.Volume, openShare.Volume);
       Assert.Equal(openShare.Transaction.Status, OrderStatusEnum.Filled);
       Assert.Equal(openShare.Transaction.Price, openShare.Price);
 
@@ -299,7 +299,7 @@ namespace Terminal.Tests
       Assert.Equal(openLong.TimeSpan, OrderTimeSpanEnum.Day);
       Assert.NotNull(openLong.Transaction.Time);
       Assert.Equal(openLong.Volume, 1);
-      Assert.Equal(openLong.Transaction.CurrentVolume, openLong.Volume);
+      Assert.Equal(openLong.Transaction.Volume, openLong.Volume);
       Assert.Equal(openLong.Transaction.Status, OrderStatusEnum.Filled);
       Assert.Equal(openLong.Transaction.Price, openLong.Price);
 
@@ -309,7 +309,7 @@ namespace Terminal.Tests
       Assert.Equal(openShort.TimeSpan, OrderTimeSpanEnum.Day);
       Assert.NotNull(openShort.Transaction.Time);
       Assert.Equal(openShort.Volume, 2);
-      Assert.Equal(openShort.Transaction.CurrentVolume, openShort.Volume);
+      Assert.Equal(openShort.Transaction.Volume, openShort.Volume);
       Assert.Equal(openShort.Transaction.Status, OrderStatusEnum.Filled);
       Assert.Equal(openShort.Transaction.Price, openShort.Price);
     }
@@ -394,7 +394,7 @@ namespace Terminal.Tests
       Assert.Equal(increaseShare.TimeSpan, OrderTimeSpanEnum.Day);
       Assert.NotNull(increaseShare.Transaction.Time);
       Assert.Equal(increaseShare.Volume, 150);
-      Assert.Equal(increaseShare.Transaction.CurrentVolume, increaseShare.Volume);
+      Assert.Equal(increaseShare.Transaction.Volume, increaseShare.Volume);
       Assert.Equal(increaseShare.Transaction.Status, OrderStatusEnum.Filled);
       Assert.Equal(increaseShare.Transaction.Price, increaseShare.Price);
 
@@ -421,8 +421,8 @@ namespace Terminal.Tests
       Assert.Equal(decreaseShort.Price, optionShort.Point.Ask);
       Assert.Equal(decreaseShort.TimeSpan, OrderTimeSpanEnum.Day);
       Assert.NotNull(decreaseShort.Transaction.Time);
-      Assert.Equal(decreaseShort.Transaction.CurrentVolume, 1);
-      Assert.Equal(decreaseShort.Transaction.CurrentVolume, decreaseShort.Volume);
+      Assert.Equal(decreaseShort.Transaction.Volume, 1);
+      Assert.Equal(decreaseShort.Transaction.Volume, decreaseShort.Volume);
       Assert.Equal(decreaseShort.Transaction.Status, OrderStatusEnum.Filled);
       Assert.Equal(decreaseShort.Transaction.Price, decreaseShort.Price);
 
@@ -514,8 +514,8 @@ namespace Terminal.Tests
       Assert.Equal(reverseOrder.Price, instrument.Point.Bid);
       Assert.Equal(reverseOrder.TimeSpan, OrderTimeSpanEnum.Gtc);
       Assert.NotNull(reverseOrder.Transaction.Time);
-      Assert.Equal(reverseOrder.Transaction.CurrentVolume, 5);
-      Assert.Equal(reverseOrder.Transaction.CurrentVolume, reverseOrder.Volume);
+      Assert.Equal(reverseOrder.Transaction.Volume, 5);
+      Assert.Equal(reverseOrder.Transaction.Volume, reverseOrder.Volume);
       Assert.Equal(reverseOrder.Transaction.Status, OrderStatusEnum.Filled);
       Assert.Equal(reverseOrder.Transaction.Price, reverseOrder.Price);
     }

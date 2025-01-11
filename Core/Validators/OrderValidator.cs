@@ -25,7 +25,7 @@ namespace Terminal.Core.Validators
       {
         RuleFor(o => o.Side).NotEmpty();
         RuleFor(o => o.Transaction.Status).Empty();
-        RuleFor(o => o.Transaction.CurrentVolume).Empty();
+        RuleFor(o => o.Transaction.Volume).Empty();
         RuleFor(o => o.Transaction).SetValidator(new TransactionValidator());
       });
     }

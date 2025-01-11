@@ -157,7 +157,7 @@ namespace Derivative.Pages
     protected async Task OnData(SectionModel section, MapInputModel inputModel)
     {
       var items = section.Collection;
-      var options = await Connector.GetOptions(new OptionScreenerModel(), new Hashtable
+      var options = await Connector.GetOptions(new InstrumentScreenerModel(), new Hashtable
       {
         ["strikeCount"] = 50,
         ["symbol"] = inputModel.Name.ToUpper(),

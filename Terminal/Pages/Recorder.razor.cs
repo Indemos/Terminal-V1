@@ -73,7 +73,7 @@ namespace Terminal.Pages
       {
         var adapter = View.Adapters["Demo"];
 
-        var optionArgs = new OptionScreenerModel
+        var optionArgs = new InstrumentScreenerModel
         {
           Count = 100,
           MinDate = DateTime.Now,

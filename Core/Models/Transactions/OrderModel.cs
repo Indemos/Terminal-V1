@@ -126,8 +126,8 @@ namespace Terminal.Core.Models
     /// <returns></returns>
     public double? GetVolume()
     {
-      var volume = Transaction?.CurrentVolume ?? 0;
-      var sideVolume = Orders.Sum(o => o.Transaction?.CurrentVolume ?? 0);
+      var volume = Transaction?.Volume ?? 0;
+      var sideVolume = Orders.Sum(o => o.Transaction?.Volume ?? 0);
 
       return volume + sideVolume;
     }
@@ -191,7 +191,7 @@ namespace Terminal.Core.Models
     /// <returns></returns>
     public double? GetGainEstimate(double? price = null)
     {
-      var volume = Transaction.CurrentVolume;
+      var volume = Transaction.Volume;
       var instrument = Transaction.Instrument;
       var step = instrument.StepValue / instrument.StepSize;
       var estimate = volume * GetPointsEstimate(price) * step * instrument.Leverage - instrument.Commission;

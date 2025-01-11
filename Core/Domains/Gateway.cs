@@ -79,7 +79,7 @@ namespace Terminal.Core.Domains
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<IList<InstrumentModel>>> GetOptions(OptionScreenerModel screener, Hashtable criteria);
+    Task<ResponseModel<IList<InstrumentModel>>> GetOptions(InstrumentScreenerModel screener, Hashtable criteria);
 
     /// <summary>
     /// Get positions
@@ -193,7 +193,7 @@ namespace Terminal.Core.Domains
     /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<IList<InstrumentModel>>> GetOptions(OptionScreenerModel args, Hashtable criteria);
+    public abstract Task<ResponseModel<IList<InstrumentModel>>> GetOptions(InstrumentScreenerModel args, Hashtable criteria);
 
     /// <summary>
     /// Get positions
@@ -264,8 +264,7 @@ namespace Terminal.Core.Domains
         nextOrder.Instruction ??= InstructionEnum.Side;
         nextOrder.Transaction.Price ??= nextOrder.Price;
         nextOrder.Transaction.Time ??= DateTime.Now;
-        nextOrder.Transaction.CurrentVolume = nextOrder.Volume;
-        nextOrder.Descriptor = group.Descriptor;
+        nextOrder.Transaction.Volume = nextOrder.Volume;
         nextOrder.Orders = [.. groupOrders];
 
         return nextOrder;

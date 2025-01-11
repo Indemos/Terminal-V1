@@ -81,7 +81,7 @@ namespace Derivative.Services
       foreach (var asset in Options.Keys)
       {
         var date = DateTime.Now;
-        var options = await Connector.GetOptions(new OptionScreenerModel(), new Hashtable
+        var options = await Connector.GetOptions(new InstrumentScreenerModel(), new Hashtable
         {
           ["strikeCount"] = 50,
           ["symbol"] = asset.ToUpper(),

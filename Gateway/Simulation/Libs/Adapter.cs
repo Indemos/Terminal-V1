@@ -301,8 +301,8 @@ namespace Simulation
     /// <returns></returns>
     protected virtual double? GetGroupPrice(params OrderModel[] orders)
     {
-      var numerator = orders.Sum(o => o.Transaction.CurrentVolume * o.Transaction.Price);
-      var denominator = orders.Sum(o => o.Transaction.CurrentVolume);
+      var numerator = orders.Sum(o => o.Transaction.Volume * o.Transaction.Price);
+      var denominator = orders.Sum(o => o.Transaction.Volume);
 
       return numerator / denominator;
     }
@@ -316,10 +316,10 @@ namespace Simulation
     protected virtual (OrderModel, OrderModel) IncreaseSide(OrderModel order, OrderModel update)
     {
       var nextOrder = order.Clone() as OrderModel;
-      var volume = nextOrder.Transaction.CurrentVolume + update.Volume;
+      var volume = nextOrder.Transaction.Volume + update.Volume;
 
       nextOrder.Transaction.Id = update.Id;
-      nextOrder.Transaction.CurrentVolume = volume;
+      nextOrder.Transaction.Volume = volume;
       nextOrder.Transaction.Time = update.Transaction.Time;
       nextOrder.Transaction.Descriptor ??= update.Transaction.Descriptor;
       nextOrder.Transaction.Price = GetGroupPrice(nextOrder, update);
@@ -340,12 +340,12 @@ namespace Simulation
       var nextOrder = order.Clone() as OrderModel;
       var previousOrder = order.Clone() as OrderModel;
       var updateVolume = update.Volume ?? 0;
-      var previousVolume = nextOrder.Transaction.CurrentVolume ?? 0;
+      var previousVolume = nextOrder.Transaction.Volume ?? 0;
       var nextVolume = Math.Abs(previousVolume - updateVolume);
 
       nextOrder.Volume = nextVolume;
       nextOrder.Transaction.Id = update.Id;
-      nextOrder.Transaction.CurrentVolume = nextVolume;
+      nextOrder.Transaction.Volume = nextVolume;
       nextOrder.Transaction.Time = update.Transaction.Time;
       nextOrder.Transaction.Descriptor ??= update.Transaction.Descriptor;
 
@@ -356,7 +356,7 @@ namespace Simulation
         case true when nextVolume.Is(0):
         case true when previousVolume > updateVolume:
           previousOrder.Volume = updateVolume;
-          previousOrder.Transaction.CurrentVolume = updateVolume;
+          previousOrder.Transaction.Volume = updateVolume;
           break;
 
         case true when previousVolume < updateVolume:
@@ -364,7 +364,7 @@ namespace Simulation
           nextOrder.Transaction.Price = update.Price;
           nextOrder.Side = nextOrder.Side is OrderSideEnum.Buy ? OrderSideEnum.Sell : OrderSideEnum.Buy;
           previousOrder.Volume = previousVolume;
-          previousOrder.Transaction.CurrentVolume = previousVolume;
+          previousOrder.Transaction.Volume = previousVolume;
           break;
       }
 
@@ -537,7 +537,7 @@ namespace Simulation
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<InstrumentModel>>> GetOptions(OptionScreenerModel screener, Hashtable criteria)
+    public override Task<ResponseModel<IList<InstrumentModel>>> GetOptions(InstrumentScreenerModel screener, Hashtable criteria)
     {
       var orders = Account
         .Positions

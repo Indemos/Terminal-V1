@@ -60,7 +60,7 @@ namespace Terminal.Services
     public static async Task<IList<InstrumentModel>> GetOptions(IGateway adapter, PointModel point, DateTime date)
     {
       var account = adapter.Account;
-      var screener = new OptionScreenerModel
+      var screener = new InstrumentScreenerModel
       {
         MinDate = date,
         MaxDate = date,

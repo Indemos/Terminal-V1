@@ -82,7 +82,7 @@ namespace Alpaca.Mappers
       {
         Id = message.ClientOrderId,
         Instrument = instrument,
-        CurrentVolume = GetValue(message.FilledQuantity, message.Quantity),
+        Volume = GetValue(message.FilledQuantity, message.Quantity),
         Time = message.CreatedAtUtc,
         Status = GetStatus(message.OrderStatus)
       };
@@ -146,7 +146,7 @@ namespace Alpaca.Mappers
         Price = price,
         Instrument = instrument,
         Descriptor = $"{message.AssetId}",
-        CurrentVolume = GetValue(message.Quantity, message.AvailableQuantity)
+        Volume = GetValue(message.Quantity, message.AvailableQuantity)
       };
 
       var order = new OrderModel

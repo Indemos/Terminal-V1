@@ -4,7 +4,7 @@ using Terminal.Core.Enums;
 
 namespace Terminal.Core.Models
 {
-  public class OptionScreenerModel
+  public class InstrumentScreenerModel
   {
     /// <summary>
     /// Strike count

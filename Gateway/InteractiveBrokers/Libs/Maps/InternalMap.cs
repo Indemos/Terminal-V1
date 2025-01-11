@@ -43,7 +43,7 @@ namespace InteractiveBrokers.Mappers
         Instrument = instrument,
         Id = $"{message.Order.PermId}",
         Descriptor = $"{message.Contract.ConId}",
-        CurrentVolume = (double)Math.Min(message.Order.FilledQuantity, message.Order.TotalQuantity),
+        Volume = (double)Math.Min(message.Order.FilledQuantity, message.Order.TotalQuantity),
         Time = DateTime.TryParse(message.Order.ActiveStartTime, out var o) ? o : DateTime.UtcNow,
         Status = GetOrderStatus(message.OrderState.Status)
       };
@@ -93,7 +93,7 @@ namespace InteractiveBrokers.Mappers
       {
         Instrument = instrument,
         Descriptor = $"{message.Contract.ConId}",
-        CurrentVolume = volume
+        Volume = volume
       };
 
       var order = new OrderModel

@@ -12,6 +12,7 @@ namespace Terminal.Core.Validators
     {
       RuleFor(o => o.Side).NotEmpty();
       RuleFor(o => o.Strike).NotEmpty();
+      RuleFor(o => o.TradeDate).NotEmpty();
       RuleFor(o => o.ExpirationDate).NotEmpty();
     }
   }

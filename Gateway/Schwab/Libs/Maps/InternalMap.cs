@@ -274,7 +274,7 @@ namespace Schwab.Mappers
         Instrument = instrument,
         Price = message.AveragePrice,
         Descriptor = message.Instrument.Symbol,
-        CurrentVolume = volume
+        Volume = volume
       };
 
       var order = new OrderModel
@@ -323,7 +323,7 @@ namespace Schwab.Mappers
         Id = message.OrderId,
         Descriptor = message.OrderId,
         Instrument = instrument,
-        CurrentVolume = GetValue(message.FilledQuantity, message.Quantity),
+        Volume = GetValue(message.FilledQuantity, message.Quantity),
         Time = message.EnteredTime,
         Status = GetStatus(message)
       };
@@ -377,7 +377,7 @@ namespace Schwab.Mappers
           var subAction = new TransactionModel
           {
             Instrument = subInstrument,
-            CurrentVolume = subOrder.Quantity
+            Volume = subOrder.Quantity
           };
 
           order.Orders.Add(new OrderModel

@@ -46,11 +46,6 @@ namespace Terminal.Core.Models
     public virtual DateTime? TradeDate { get; set; }
 
     /// <summary>
-    /// Last trading date
-    /// </summary>
-    public virtual DateTime? Expiration { get; set; }
-
-    /// <summary>
     /// Option metrics
     /// </summary>
     public virtual VarianceModel Variance { get; set; }

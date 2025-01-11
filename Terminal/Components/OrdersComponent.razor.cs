@@ -58,7 +58,7 @@ namespace Terminal.Components
         Time = o.Transaction.Time,
         Group = o.BasisName ?? o.Name,
         Side = o.Side ?? OrderSideEnum.None,
-        Size = o.Transaction.CurrentVolume ?? 0,
+        Size = o.Transaction.Volume ?? 0,
         Price = o.Price ?? 0,
       };
     }
