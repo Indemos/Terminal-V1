@@ -274,8 +274,8 @@ namespace InteractiveBrokers
         var id = _counter++;
         var count = screener.Count ?? 1;
         var instrument = screener.Instrument;
-        var minDate = screener.MinDate?.ToString("yyyyMMdd HH:mm:ss");
-        var maxDate = (screener.MaxDate ?? DateTime.Now).ToString("yyyyMMdd HH:mm:ss");
+        var minDate = screener.MinDate?.ToString($"yyyyMMdd-HH:mm:ss");
+        var maxDate = (screener.MaxDate ?? DateTime.Now).ToString($"yyyyMMdd-HH:mm:ss");
         var contract = ExternalMap.GetContract(instrument);
         var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -295,9 +295,10 @@ namespace InteractiveBrokers
         }
 
         _client.historicalTicksList += subscribe;
-        _client.ClientSocket.reqHistoricalTicks(id, contract, minDate, maxDate, count, "BID_ASK", 1, true, null);
+        _client.ClientSocket.reqHistoricalTicks(id, contract, minDate, maxDate, count, "BID_ASK", 1, false, null);
 
         await await Task.WhenAny(source.Task, Task.Delay(Timeout).ContinueWith(o => unsubscribe()));
+        await Task.Delay(Interval);
       }
       catch (Exception e)
       {

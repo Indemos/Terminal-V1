@@ -25,143 +25,146 @@
 
   </div>
 
-  <MudExpansionPanels MultiExpansion="true">
+  @if (IsRunner is false)
+  {
+    <MudExpansionPanels MultiExpansion="true">
 
-    @if (FramesView is not null)
-    {
+      @if (FramesView is not null)
+      {
+        <MudExpansionPanel>
+          <TitleContent>
+            <div class="d-flex">
+              <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
+              <MudText>Frames</MudText>
+            </div>
+          </TitleContent>
+          <ChildContent>
+            @FramesView
+          </ChildContent>
+        </MudExpansionPanel>
+      }
+
+      @if (EstimatesView is not null)
+      {
+        <MudExpansionPanel>
+          <TitleContent>
+            <div class="d-flex">
+              <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
+              <MudText>Estimates</MudText>
+            </div>
+          </TitleContent>
+          <ChildContent>
+            @EstimatesView
+          </ChildContent>
+        </MudExpansionPanel>
+      }
+
+      @if (PositionsMetricsView is not null)
+      {
+        <MudExpansionPanel>
+          <TitleContent>
+            <div class="d-flex">
+              <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
+              <MudText>Position Metrics</MudText>
+            </div>
+          </TitleContent>
+          <ChildContent>
+            @PositionsMetricsView
+          </ChildContent>
+        </MudExpansionPanel>
+      }
+
+      @if (StrikesView is not null)
+      {
+        <MudExpansionPanel>
+          <TitleContent>
+            <div class="d-flex">
+              <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
+              <MudText>Strikes</MudText>
+            </div>
+          </TitleContent>
+          <ChildContent>
+            @StrikesView
+          </ChildContent>
+        </MudExpansionPanel>
+      }
+
       <MudExpansionPanel>
         <TitleContent>
           <div class="d-flex">
             <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
-            <MudText>Frames</MudText>
+            <MudText>Charts</MudText>
           </div>
         </TitleContent>
         <ChildContent>
-          @FramesView
+          <ChartsComponent @ref="ChartsView" />
         </ChildContent>
       </MudExpansionPanel>
-    }
 
-    @if (EstimatesView is not null)
-    {
       <MudExpansionPanel>
         <TitleContent>
           <div class="d-flex">
             <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
-            <MudText>Estimates</MudText>
+            <MudText>Performance</MudText>
           </div>
         </TitleContent>
         <ChildContent>
-          @EstimatesView
+          <ChartsComponent @ref="ReportsView" />
         </ChildContent>
       </MudExpansionPanel>
-    }
 
-    @if (PositionsMetricsView is not null)
-    {
       <MudExpansionPanel>
         <TitleContent>
           <div class="d-flex">
             <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
-            <MudText>Position Metrics</MudText>
+            <MudText>Orders</MudText>
           </div>
         </TitleContent>
         <ChildContent>
-          @PositionsMetricsView
+          <OrdersComponent @ref="OrdersView" />
         </ChildContent>
       </MudExpansionPanel>
-    }
 
-    @if (StrikesView is not null)
-    {
       <MudExpansionPanel>
         <TitleContent>
           <div class="d-flex">
             <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
-            <MudText>Strikes</MudText>
+            <MudText>Positions</MudText>
           </div>
         </TitleContent>
         <ChildContent>
-          @StrikesView
+          <PositionsComponent @ref="PositionsView" />
         </ChildContent>
       </MudExpansionPanel>
-    }
 
-    <MudExpansionPanel>
-      <TitleContent>
-        <div class="d-flex">
-          <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
-          <MudText>Charts</MudText>
-        </div>
-      </TitleContent>
-      <ChildContent>
-        <ChartsComponent @ref="ChartsView" />
-      </ChildContent>
-    </MudExpansionPanel>
+      <MudExpansionPanel>
+        <TitleContent>
+          <div class="d-flex">
+            <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
+            <MudText>Deals</MudText>
+          </div>
+        </TitleContent>
+        <ChildContent>
+          <DealsComponent @ref="DealsView" />
+        </ChildContent>
+      </MudExpansionPanel>
 
-    <MudExpansionPanel>
-      <TitleContent>
-        <div class="d-flex">
-          <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
-          <MudText>Performance</MudText>
-        </div>
-      </TitleContent>
-      <ChildContent>
-        <ChartsComponent @ref="ReportsView" />
-      </ChildContent>
-    </MudExpansionPanel>
+      <MudExpansionPanel>
+        <TitleContent>
+          <div class="d-flex">
+            <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
+            <MudText>Statements</MudText>
+            <MudText>
+              <a href="#" @onclick:stopPropagation="true" @onclick:preventDefault="true" @onclick="OpenState" class="updater ml-4">Update</a>
+            </MudText>
+          </div>
+        </TitleContent>
+        <ChildContent>
+          <StatementsComponent @ref="StatementsView" />
+        </ChildContent>
+      </MudExpansionPanel>
 
-    <MudExpansionPanel>
-      <TitleContent>
-        <div class="d-flex">
-          <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
-          <MudText>Orders</MudText>
-        </div>
-      </TitleContent>
-      <ChildContent>
-        <OrdersComponent @ref="OrdersView" />
-      </ChildContent>
-    </MudExpansionPanel>
-
-    <MudExpansionPanel>
-      <TitleContent>
-        <div class="d-flex">
-          <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
-          <MudText>Positions</MudText>
-        </div>
-      </TitleContent>
-      <ChildContent>
-        <PositionsComponent @ref="PositionsView" />
-      </ChildContent>
-    </MudExpansionPanel>
-
-    <MudExpansionPanel>
-      <TitleContent>
-        <div class="d-flex">
-          <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
-          <MudText>Deals</MudText>
-        </div>
-      </TitleContent>
-      <ChildContent>
-        <DealsComponent @ref="DealsView" />
-      </ChildContent>
-    </MudExpansionPanel>
-
-    <MudExpansionPanel>
-      <TitleContent>
-        <div class="d-flex">
-          <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
-          <MudText>Statements</MudText>
-          <MudText>
-            <a href="#" @onclick:stopPropagation="true" @onclick:preventDefault="true" @onclick="OpenState" class="updater ml-4">Update</a>
-          </MudText>
-        </div>
-      </TitleContent>
-      <ChildContent>
-        <StatementsComponent @ref="StatementsView" />
-      </ChildContent>
-    </MudExpansionPanel>
-
-  </MudExpansionPanels>
+    </MudExpansionPanels>
+  }
 
 </div>

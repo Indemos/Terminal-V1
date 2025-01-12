@@ -14,10 +14,11 @@ namespace Terminal.Components
 {
   public partial class PageComponent
   {
-    [Parameter] public virtual RenderFragment FramesView { get; set; } = default;
-    [Parameter] public virtual RenderFragment EstimatesView { get; set; } = default;
-    [Parameter] public virtual RenderFragment PositionsMetricsView { get; set; } = default;
-    [Parameter] public virtual RenderFragment StrikesView { get; set; } = default;
+    [Parameter] public virtual bool IsRunner { get; set; }
+    [Parameter] public virtual RenderFragment FramesView { get; set; }
+    [Parameter] public virtual RenderFragment EstimatesView { get; set; }
+    [Parameter] public virtual RenderFragment PositionsMetricsView { get; set; }
+    [Parameter] public virtual RenderFragment StrikesView { get; set; }
 
     public virtual StatusEnum ConnectionState { get; set; }
     public virtual StatusEnum SubscriptionState { get; set; }
@@ -63,11 +64,11 @@ namespace Terminal.Components
 
         InstanceService<ScheduleService>.Instance.Send(() =>
         {
-          ChartsView.Clear();
-          ReportsView.Clear();
-          DealsView.Clear();
-          OrdersView.Clear();
-          PositionsView.Clear();
+          ChartsView?.Clear();
+          ReportsView?.Clear();
+          DealsView?.Clear();
+          OrdersView?.Clear();
+          PositionsView?.Clear();
 
           OnDisconnect();
 

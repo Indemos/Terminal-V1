@@ -21,7 +21,7 @@ using Terminal.Core.Services;
 
 namespace Terminal.Pages
 {
-  public partial class Recorder
+  public partial class SchwabOptionsRecorder
   {
     [Inject] IConfiguration Configuration { get; set; }
 
@@ -89,17 +89,17 @@ namespace Terminal.Pages
         var dom = await adapter.GetDom(domArgs, []);
         var options = await adapter.GetOptions(optionArgs, []);
         var message = dom.Data.Bids.First();
-        var location = $"D:/Code/NET/Terminal/Data/{Instrument.Name}/{DateTime.Now:yyyy-MM-dd}";
+        var storage = $"D:/Code/NET/Terminal/Data/{Instrument.Name}/{DateTime.Now:yyyy-MM-dd}";
 
         message.Derivatives = new Dictionary<string, IList<InstrumentModel>>
         {
           [nameof(InstrumentEnum.Options)] = options.Data
         };
 
-        Directory.CreateDirectory(location);
+        Directory.CreateDirectory(storage);
 
         var content = JsonSerializer.Serialize(message, Srv.Options);
-        var source = $"{location}/{DateTime.UtcNow.Ticks}.zip";
+        var source = $"{storage}/{DateTime.UtcNow.Ticks}.zip";
 
         using var archive = ZipFile.Open(source, ZipArchiveMode.Create);
         using (var entry = archive.CreateEntry($"{DateTime.UtcNow.Ticks}").Open())
