@@ -6,6 +6,7 @@
 # Custom 
 appsettings.Production.json
 Releases/
+Events
 
 # User-specific files
 *.suo

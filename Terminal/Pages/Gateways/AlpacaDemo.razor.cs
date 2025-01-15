@@ -1,5 +1,6 @@
+using Alpaca;
+using Alpaca.Markets;
 using Canvas.Core.Shapes;
-using InteractiveBrokers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using System;
@@ -15,19 +16,17 @@ using Terminal.Services;
 
 namespace Terminal.Pages.Gateways
 {
-  public partial class InteractiveBrokers
+  public partial class AlpacaDemo
   {
     [Inject] IConfiguration Configuration { get; set; }
 
     protected PageComponent View { get; set; }
     protected PerformanceIndicator Performance { get; set; }
-    protected virtual InstrumentModel Instrument { get; set; } = new InstrumentModel
+    protected InstrumentModel Instrument { get; set; } = new InstrumentModel
     {
-      Name = "ESH5",
-      Exchange = "CME",
-      Type = InstrumentEnum.Futures,
-      TimeFrame = TimeSpan.FromMinutes(1),
-      Basis = new InstrumentModel { Name = "ES" }
+      Name = "DOGE/USD",
+      Type = InstrumentEnum.Coins,
+      TimeFrame = TimeSpan.FromMinutes(1)
     };
 
     protected override async Task OnAfterRenderAsync(bool setup)
@@ -60,7 +59,7 @@ namespace Terminal.Pages.Gateways
     {
       var account = new Account
       {
-        Descriptor = Configuration["InteractiveBrokers:Account"],
+        Descriptor = "Demo",
         Instruments = new ConcurrentDictionary<string, InstrumentModel>
         {
           [Instrument.Name] = Instrument
@@ -70,7 +69,9 @@ namespace Terminal.Pages.Gateways
       View.Adapters["Prime"] = new Adapter
       {
         Account = account,
-        Port = int.Parse(Configuration["InteractiveBrokers:Port"])
+        Source = Environments.Paper,
+        ClientId = Configuration["Alpaca:PaperToken"],
+        ClientSecret = Configuration["Alpaca:PaperSecret"]
       };
 
       Performance = new PerformanceIndicator { Name = "Balance" };
@@ -89,9 +90,9 @@ namespace Terminal.Pages.Gateways
 
     protected async Task OnData(PointModel point)
     {
-      var name = Instrument.Name;
+      var name = Instrument.Name.Replace("/", string.Empty);
       var account = View.Adapters["Prime"].Account;
-      var instrument = account.Instruments[name];
+      var instrument = account.Instruments[Instrument.Name];
       var performance = Performance.Calculate([account]);
       var openOrders = account.Orders.Values.Where(o => Equals(o.Name, name));
       var openPositions = account.Positions.Values.Where(o => Equals(o.Name, name));
@@ -104,12 +105,12 @@ namespace Terminal.Pages.Gateways
           var position = account
             .Positions
             .Values
-            .Where(o => Equals(o.BasisName ?? o.Name, name))
+            .Where(o => Equals(o.Name, name))
             .FirstOrDefault();
 
           if (position is not null)
           {
-            await ClosePositions(position.Name);
+            await ClosePositions(name);
           }
 
         }, 10000);
@@ -135,7 +136,7 @@ namespace Terminal.Pages.Gateways
 
       var TP = new OrderModel
       {
-        Volume = 1,
+        Volume = 10,
         Side = stopSide,
         Type = OrderTypeEnum.Limit,
         Instruction = InstructionEnum.Brace,
@@ -145,7 +146,7 @@ namespace Terminal.Pages.Gateways
 
       var SL = new OrderModel
       {
-        Volume = 1,
+        Volume = 10,
         Side = stopSide,
         Type = OrderTypeEnum.Stop,
         Instruction = InstructionEnum.Brace,
@@ -155,12 +156,12 @@ namespace Terminal.Pages.Gateways
 
       var order = new OrderModel
       {
-        Volume = 1,
         Side = side,
+        Volume = 10,
         Price = GetPrice(direction),
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Instrument = instrument },
-        Orders = [SL, TP]
+        Transaction = new() { Instrument = instrument }
+        //Orders = [SL, TP]
       };
 
       await adapter.CreateOrders(order);
@@ -176,8 +177,8 @@ namespace Terminal.Pages.Gateways
         var order = new OrderModel
         {
           Side = side,
-          Type = OrderTypeEnum.Market,
           Volume = position.Volume,
+          Type = OrderTypeEnum.Market,
           Transaction = new()
           {
             Instrument = position.Transaction.Instrument

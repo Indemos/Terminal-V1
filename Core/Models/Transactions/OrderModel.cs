@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using Terminal.Core.Enums;
 
 namespace Terminal.Core.Models
@@ -90,6 +91,7 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Order events
     /// </summary>
+    [JsonIgnore]
     public virtual Action<MessageModel<OrderModel>> OrderStream { get; set; }
 
     /// <summary>

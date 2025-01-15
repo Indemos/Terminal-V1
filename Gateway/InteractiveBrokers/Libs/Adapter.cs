@@ -8,6 +8,8 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.ServiceModel.Channels;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
@@ -72,8 +74,8 @@ namespace InteractiveBrokers
     public Adapter()
     {
       Port = 7497;
+      Interval = 100;
       Host = "127.0.0.1";
-      Interval = 15;
       Timeout = TimeSpan.FromSeconds(10);
 
       _order = 1;
@@ -130,10 +132,10 @@ namespace InteractiveBrokers
         await Unsubscribe(instrument);
 
         var id = _subscriptions[instrument.Name] = _counter++;
-        var contracts = await GetContracts(instrument, Interval);
+        var contracts = await GetContracts(instrument);
         var contract = contracts.Data.First();
 
-        await SubscribeToPoints(id, InternalMap.GetInstrument(contract, instrument), Interval);
+        await SubscribeToPoints(id, InternalMap.GetInstrument(contract, instrument));
 
         response.Data = StatusEnum.Success;
       }
@@ -210,7 +212,7 @@ namespace InteractiveBrokers
         var id = _counter++;
         var instrument = screener.Instrument;
         var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var contracts = await GetContracts(instrument, Interval);
+        var contracts = await GetContracts(instrument);
 
         response.Data = [.. contracts
           .Data
@@ -334,7 +336,7 @@ namespace InteractiveBrokers
         }
       }
 
-      //await GetAccount([]);
+      await GetAccount([]);
 
       return response;
     }
@@ -362,9 +364,8 @@ namespace InteractiveBrokers
     /// Get contract definition
     /// </summary>
     /// <param name="instrument"></param>
-    /// <param name="interval"></param>
     /// <returns></returns>
-    protected virtual async Task<ResponseModel<IList<Contract>>> GetContracts(InstrumentModel instrument, int interval = 0)
+    protected virtual async Task<ResponseModel<IList<Contract>>> GetContracts(InstrumentModel instrument)
     {
       var id = _counter++;
       var response = new ResponseModel<IList<Contract>> { Data = [] };
@@ -392,7 +393,7 @@ namespace InteractiveBrokers
       _client.ClientSocket.reqContractDetails(id, contract);
 
       await await Task.WhenAny(source.Task, Task.Delay(Timeout).ContinueWith(o => unsubscribe(id)));
-      await Task.Delay(interval);
+      await Task.Delay(Interval);
 
       return response;
     }
@@ -406,7 +407,7 @@ namespace InteractiveBrokers
       {
         var message = new MessageModel<string>
         {
-          Message = "No connection",
+          Message = $"{ClientErrorEnum.NoConnection}",
           Action = ActionEnum.Disconnect
         };
 
@@ -419,10 +420,22 @@ namespace InteractiveBrokers
     /// </summary>
     protected virtual void SubscribeToErrors()
     {
-      _client.Error += (id, code, message, error, e) =>
+      _client.Error += async (id, code, message, error, e) =>
       {
-        Console.WriteLine(id + " : " + code + " : " + message + " : " + error + " : " + e?.Message);
-        InstanceService<MessageService>.Instance.OnMessage(new MessageModel<string> { Error = e });
+        switch (true)
+        {
+          case true when Equals(code, (int)ClientErrorEnum.NoConnection):
+          case true when Equals(code, (int)ClientErrorEnum.ConnectionError): await Connect(); break;
+        }
+
+        var content = new MessageModel<string>
+        {
+          Code = code,
+          Message = message,
+          Error = e
+        };
+
+        InstanceService<MessageService>.Instance.OnMessage(content);
       };
     }
 
@@ -538,6 +551,7 @@ namespace InteractiveBrokers
         {
           _client.PositionMulti -= subscribe;
           _client.PositionMultiEnd -= unsubscribe;
+          _client.ClientSocket.cancelPositionsMulti(id);
 
           source.TrySetResult();
         }
@@ -564,9 +578,8 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="id"></param>
     /// <param name="instrument"></param>
-    /// <param name="interval"></param>
     /// <returns></returns>
-    protected virtual async Task SubscribeToPoints(int id, InstrumentModel instrument, int interval = 0)
+    protected virtual async Task SubscribeToPoints(int id, InstrumentModel instrument)
     {
       var max = short.MaxValue;
       var point = new PointModel();
@@ -585,7 +598,7 @@ namespace InteractiveBrokers
         return Math.Round(data, 2);
       }
 
-      void subscribeToComps(TickOptionMessage message)
+      void subscribeToComs(TickOptionMessage message)
       {
         if (Equals(id, message.RequestId))
         {
@@ -605,13 +618,13 @@ namespace InteractiveBrokers
       {
         if (Equals(id, message.RequestId))
         {
-          switch (ExternalMap.GetEnum<FieldCodeEnum>(message.Field))
+          switch (ExternalMap.GetEnum<PropertyEnum>(message.Field))
           {
-            case FieldCodeEnum.BidSize: point.BidSize = message.Data ?? point.BidSize; break;
-            case FieldCodeEnum.AskSize: point.AskSize = message.Data ?? point.AskSize; break;
-            case FieldCodeEnum.BidPrice: point.Bid = message.Data ?? point.Bid; break;
-            case FieldCodeEnum.AskPrice: point.Ask = message.Data ?? point.Ask; break;
-            case FieldCodeEnum.LastPrice: point.Last = message.Data ?? point.Last; break;
+            case PropertyEnum.BidSize: point.BidSize = message.Data ?? point.BidSize; break;
+            case PropertyEnum.AskSize: point.AskSize = message.Data ?? point.AskSize; break;
+            case PropertyEnum.BidPrice: point.Bid = message.Data ?? point.Bid; break;
+            case PropertyEnum.AskPrice: point.Ask = message.Data ?? point.Ask; break;
+            case PropertyEnum.LastPrice: point.Last = message.Data ?? point.Last; break;
           }
 
           point.Last = point.Last is 0 or null ? point.Bid ?? point.Ask : point.Last;
@@ -635,10 +648,10 @@ namespace InteractiveBrokers
       }
 
       _client.TickPrice += subscribeToPrices;
-      _client.TickOptionCommunication += subscribeToComps;
+      _client.TickOptionCommunication += subscribeToComs;
       _client.ClientSocket.reqMktData(id, contract, string.Empty, false, false, null);
 
-      await Task.Delay(interval);
+      await Task.Delay(Interval);
     }
 
     /// <summary>
@@ -666,6 +679,7 @@ namespace InteractiveBrokers
         {
           _client.AccountSummary -= subscribe;
           _client.AccountSummaryEnd -= unsubscribe;
+          _client.ClientSocket.cancelAccountSummary(id);
 
           source.TrySetResult();
         }
@@ -676,6 +690,7 @@ namespace InteractiveBrokers
       _client.ClientSocket.reqAccountSummary(id, "All", AccountSummaryTags.GetAllTags());
 
       await await Task.WhenAny(source.Task, Task.Delay(Timeout).ContinueWith(o => unsubscribe(null)));
+      await Task.Delay(Interval);
 
       response.Data = Account;
 
@@ -711,11 +726,9 @@ namespace InteractiveBrokers
       var signal = new EReaderMonitorSignal();
 
       _client = new IBClient(signal);
-      _client.ClientSocket.SetConnectOptions("+PACEAPI");
       _client.ClientSocket.eConnect(Host, Port, 0);
 
       var reader = new EReader(_client.ClientSocket, signal);
-
       var process = new Thread(() =>
       {
         while (_client.ClientSocket.IsConnected())
@@ -745,40 +758,39 @@ namespace InteractiveBrokers
 
       var orderId = _order++;
       var response = new ResponseModel<OrderModel>();
-      var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
       var exOrders = ExternalMap.GetOrders(orderId, order, Account);
-      var exResponse = null as OpenOrderMessage;
-
-      void subscribe(OpenOrderMessage message)
-      {
-        if (Equals(orderId, message.OrderId))
-        {
-          exResponse = message;
-          unsubscribe();
-          source.TrySetResult();
-        }
-      }
-
-      void unsubscribe()
-      {
-        _client.OpenOrder -= subscribe;
-        _client.OpenOrderEnd -= unsubscribe;
-      }
-
-      _client.OpenOrder += subscribe;
-      _client.OpenOrderEnd += unsubscribe;
+      var exResponses = new Dictionary<int, OpenOrderMessage>();
 
       foreach (var exOrder in exOrders)
       {
-        _client.ClientSocket.placeOrder(exOrder.Order.OrderId, exOrder.Contract, exOrder.Order);
-        await Task.Delay(Interval);
-      }
+        var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-      await await Task.WhenAny(source.Task, Task.Delay(Timeout).ContinueWith(o => unsubscribe()));
+        void subscribe(OpenOrderMessage message)
+        {
+          if (Equals(exOrder.Order.OrderId, message.OrderId))
+          {
+            exResponses[message.OrderId] = message;
+            unsubscribe();
+            source.TrySetResult();
+          }
+        }
+
+        void unsubscribe()
+        {
+          _client.OpenOrder -= subscribe;
+          _client.OpenOrderEnd -= unsubscribe;
+        }
+
+        _client.OpenOrder += subscribe;
+        _client.OpenOrderEnd += unsubscribe;
+        _client.ClientSocket.placeOrder(exOrder.Order.OrderId, exOrder.Contract, exOrder.Order);
+
+        await await Task.WhenAny(source.Task, Task.Delay(Timeout).ContinueWith(o => unsubscribe()));
+      }
 
       response.Data = order;
       response.Data.Transaction.Id = $"{orderId}";
-      response.Data.Transaction.Status = InternalMap.GetOrderStatus(exResponse?.OrderState?.Status);
+      response.Data.Transaction.Status = InternalMap.GetOrderStatus(exResponses?.Get(orderId)?.OrderState?.Status);
 
       return response;
     }

@@ -1,6 +1,10 @@
 @using Distribution.Services
+@using Microsoft.Extensions.Configuration
 @using Terminal.Core.Services
+
 @inject ISnackbar Messenger
+@inject IConfiguration Configuration
+
 @inherits LayoutComponentBase
 
 <PageTitle>Terminal</PageTitle>
@@ -16,15 +20,38 @@
 
 @code {
 
-  public DashboardTheme _theme = new();
+  protected object _sync = new object();
+  protected DashboardTheme _theme = new();
 
   protected override void OnAfterRender(bool setup)
   {
     if (setup)
     {
       StateHasChanged();
-    }
 
-    InstanceService<MessageService>.Instance.OnMessage += o => Messenger.Add(o?.Error?.Message ?? o?.Message);
+      InstanceService<MessageService>.Instance.OnMessage += o =>
+      {
+        lock (_sync)
+        {
+          var code = o?.Code;
+          var message = o?.Message;
+          var exception = o?.Error?.Message;
+
+          InstanceService<RecordService>
+            .Instance
+            .Recorder
+            .Information("{@Message}", o);
+
+          Messenger.Add
+          (
+            @<ul>
+              <li class="@(code is null ? "d-none" : string.Empty)">Code: @(code)</li>
+              <li class="@(message is null ? "d-none" : string.Empty)">Message: @(message)</li>
+              <li class="@(exception is null ? "d-none" : string.Empty)">Exception: @(exception)</li>
+            </ul>
+          );
+        }
+      };
+    }
   }
 }

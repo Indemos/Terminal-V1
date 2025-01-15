@@ -21,12 +21,17 @@ namespace Terminal.Core.Models
     public virtual T Previous { get; set; }
 
     /// <summary>
-    /// Current or next value to be set
+    /// Message or error code
+    /// </summary>
+    public virtual int? Code { get; set; }
+
+    /// <summary>
+    /// Description
     /// </summary>
     public virtual string Message { get; set; }
 
     /// <summary>
-    /// Previous value
+    /// Exception
     /// </summary>
     public virtual Exception Error { get; set; }
   }

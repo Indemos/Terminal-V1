@@ -1,6 +1,7 @@
 using Distribution.Services;
 using Distribution.Stream;
 using Distribution.Stream.Extensions;
+using Schwab.Enums;
 using Schwab.Mappers;
 using Schwab.Messages;
 using System;
@@ -170,6 +171,54 @@ namespace Schwab
           {
             Keys = instrument.Name,
             Fields = string.Join(",", Enumerable.Range(0, 10))
+          }
+        });
+      }
+      catch (Exception e)
+      {
+        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+      }
+
+      return response;
+    }
+
+    /// <summary>
+    /// Subscribe to data streams
+    /// </summary>
+    /// <param name="instrument"></param>
+    /// <param name="domType"></param>
+    /// <returns></returns>
+    public virtual async Task<ResponseModel<StatusEnum>> SubscribeToDom(InstrumentModel instrument, DomEnum domType)
+    {
+      var response = new ResponseModel<StatusEnum>
+      {
+        Data = StatusEnum.Success
+      };
+
+      var domName = "OPTIONS_BOOK";
+
+      switch (domType)
+      {
+        case DomEnum.Ndx: domName = "NASDAQ_BOOK"; break;
+        case DomEnum.Nyse: domName = "NYSE_BOOK"; break;
+      }
+
+      try
+      {
+        var streamData = _userData.Streamer.FirstOrDefault();
+
+        await Unsubscribe(instrument);
+        await SendStream(_streamer, new StreamInputMessage
+        {
+          Requestid = ++_counter,
+          Service = domName,
+          Command = "ADD",
+          CustomerId = streamData.CustomerId,
+          CorrelationId = $"{Guid.NewGuid()}",
+          Parameters = new SrteamParamsMessage
+          {
+            Keys = instrument.Name,
+            Fields = string.Join(",", Enumerable.Range(0, 3))
           }
         });
       }

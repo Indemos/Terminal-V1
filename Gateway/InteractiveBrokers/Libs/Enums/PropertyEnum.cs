@@ -1,6 +1,6 @@
 namespace InteractiveBrokers.Enums
 {
-  public enum FieldCodeEnum : int
+  public enum PropertyEnum : int
   {
     BidSize = 0,
     BidPrice = 1,

@@ -6,7 +6,6 @@
 
   <ItemGroup>
     <PackageReference Include="Distribution" Version="2.2.1" />
-    <PackageReference Include="MathNet.Numerics" Version="6.0.0-beta1" />
     <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
     <PackageReference Include="SkiaSharp" Version="3.118.0-preview.2.3" />
     <PackageReference Include="System.Interactive" Version="6.0.1" />

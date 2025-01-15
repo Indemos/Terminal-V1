@@ -2,6 +2,7 @@ using Canvas.Core.Shapes;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Schwab;
+using Schwab.Enums;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
@@ -15,7 +16,7 @@ using Terminal.Services;
 
 namespace Terminal.Pages.Gateways
 {
-  public partial class Schwab
+  public partial class SchwabDemo
   {
     [Inject] IConfiguration Configuration { get; set; }
 
@@ -35,13 +36,16 @@ namespace Terminal.Pages.Gateways
         await CreateViews();
 
         View.OnPreConnect = CreateAccounts;
-        View.OnPostConnect = () =>
+        View.OnPostConnect = async () =>
         {
-          var account = View.Adapters["Prime"].Account;
+          var adapter = View.Adapters["Prime"] as Adapter;
+          var account = adapter.Account;
 
           View.DealsView.UpdateItems(account.Deals);
           View.OrdersView.UpdateItems(account.Orders.Values);
           View.PositionsView.UpdateItems(account.Positions.Values);
+
+          await adapter.SubscribeToDom(Instrument, DomEnum.Options);
         };
       }
 
