@@ -1,4 +1,3 @@
-using MudBlazor;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,15 +10,6 @@ namespace Terminal.Components
   public partial class DealsComponent
   {
     protected Task Update { get; set; }
-
-    protected TableGroupDefinition<PositionRecord> GroupDefinition = new()
-    {
-      GroupName = "Group",
-      Indentation = false,
-      Expandable = true,
-      IsInitiallyExpanded = true,
-      Selector = (e) => e.Group
-    };
 
     /// <summary>
     /// Table records
@@ -35,7 +25,7 @@ namespace Terminal.Components
       if (Update is null || Update.IsCompleted)
       {
         Items = [.. items.Select(GetRecord)];
-        Update = InvokeAsync(StateHasChanged);
+        Update = Task.WhenAll(InvokeAsync(StateHasChanged), Task.Delay(100));
       }
     }
 

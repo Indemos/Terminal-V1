@@ -1,26 +1,43 @@
-<MudTable Items="@Items" GroupBy="@GroupDefinition" Hover="true" MultiSelection="false" SortLabel="Order" Elevation="0">
-  <HeaderContent>
-    <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<PositionRecord, object>(o => o.Time)">Time</MudTableSortLabel></MudTh>
-    <MudTh><MudTableSortLabel SortBy="new Func<PositionRecord, object>(o => o.Name)">Instrument</MudTableSortLabel></MudTh>
-    <MudTh><MudTableSortLabel SortBy="new Func<PositionRecord, object>(o => o.Size)">Size</MudTableSortLabel></MudTh>
-    <MudTh><MudTableSortLabel SortBy="new Func<PositionRecord, object>(o => o.Side)">Side</MudTableSortLabel></MudTh>
-    <MudTh><MudTableSortLabel SortBy="new Func<PositionRecord, object>(o => o.OpenPrice)">Open Price</MudTableSortLabel></MudTh>
-    <MudTh><MudTableSortLabel SortBy="new Func<PositionRecord, object>(o => o.ClosePrice)">Close Price</MudTableSortLabel></MudTh>
-    <MudTh><MudTableSortLabel SortBy="new Func<PositionRecord, object>(o => o.Gain)">Gain</MudTableSortLabel></MudTh>
-  </HeaderContent>
-  <GroupHeaderTemplate>
-    <MudTh Class="mud-table-cell-custom-group" colspan="7">@($"{context.GroupName}: {context.Key}") </MudTh>
-  </GroupHeaderTemplate>
-  <RowTemplate>
-    <MudTd DataLabel="Time">@($"{context.Time:yyyy-MM-dd HH:mm:ss}")</MudTd>
-    <MudTd DataLabel="Instrument">@context.Name</MudTd>
-    <MudTd DataLabel="Size">@context.Size</MudTd>
-    <MudTd DataLabel="Side">@context.Side</MudTd>
-    <MudTd DataLabel="Open Price">@($"{context.OpenPrice:0.00}")</MudTd>
-    <MudTd DataLabel="Close Price">@($"{context.ClosePrice:0.00}")</MudTd>
-    <MudTd DataLabel="Gain">@($"{context.Gain:0.00}")</MudTd>
-  </RowTemplate>
+<MudDataGrid
+  Items="@Items"
+  Hover="true"
+  MultiSelection="true"
+  Filterable="true"
+  FilterMode="DataGridFilterMode.ColumnFilterMenu"
+  Hideable="true"
+  SortMode="SortMode.Multiple"
+  Groupable="true"
+  GroupExpanded="true">
+  <Columns>
+    <PropertyColumn Property="o => o.Time" Title="Time">
+      <CellTemplate>
+        @($"{context.Item.Time:yyyy-MM-dd HH:mm:ss}")
+      </CellTemplate>
+    </PropertyColumn>
+    <PropertyColumn Property="o => o.Name" Title="Instrument" Grouping GroupBy="new Func<PositionRecord, string>(o => o.Group)">
+      <GroupTemplate>
+        <span>Group: @context.Grouping.Key</span>
+      </GroupTemplate>
+    </PropertyColumn>
+    <PropertyColumn Property="o => o.Size" Title="Size" />
+    <PropertyColumn Property="o => o.Side" Title="Side" />
+    <PropertyColumn Property="o => o.OpenPrice" Title="Open Price">
+      <CellTemplate>
+        @($"{context.Item.OpenPrice:0.00}")
+      </CellTemplate>
+    </PropertyColumn>
+    <PropertyColumn Property="o => o.ClosePrice" Title="Close Price">
+      <CellTemplate>
+        @($"{context.Item.ClosePrice:0.00}")
+      </CellTemplate>
+    </PropertyColumn>
+    <PropertyColumn Property="o => o.Gain" Title="Gain">
+      <CellTemplate>
+        @($"{context.Item.Gain:0.00}")
+      </CellTemplate>
+    </PropertyColumn>
+  </Columns>
   <PagerContent>
-    <MudTablePager PageSizeOptions="new int[]{50, 100}" />
+    <MudDataGridPager T="PositionRecord" />
   </PagerContent>
-</MudTable>
+</MudDataGrid>

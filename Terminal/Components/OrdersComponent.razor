@@ -1,24 +1,34 @@
-<MudTable Items="@Items" GroupBy="@GroupDefinition" Hover="true" MultiSelection="false" SortLabel="Order" Elevation="0">
-  <HeaderContent>
-    <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<OrderRecord, object>(o => o.Time)">Time</MudTableSortLabel></MudTh>
-    <MudTh><MudTableSortLabel SortBy="new Func<OrderRecord, object>(o => o.Name)">Instrument</MudTableSortLabel></MudTh>
-    <MudTh><MudTableSortLabel SortBy="new Func<OrderRecord, object>(o => o.Size)">Size</MudTableSortLabel></MudTh>
-    <MudTh><MudTableSortLabel SortBy="new Func<OrderRecord, object>(o => o.Side)">Side</MudTableSortLabel></MudTh>
-    <MudTh><MudTableSortLabel SortBy="new Func<OrderRecord, object>(o => o.Price)">Open Price</MudTableSortLabel></MudTh>
-    <MudTh><MudTableSortLabel SortBy="new Func<OrderRecord, object>(o => o.Type)">Type</MudTableSortLabel></MudTh>
-  </HeaderContent>
-  <GroupHeaderTemplate>
-    <MudTh Class="mud-table-cell-custom-group" colspan="7">@($"{context.GroupName}: {context.Key}") </MudTh>
-  </GroupHeaderTemplate>
-  <RowTemplate>
-    <MudTd DataLabel="Time">@($"{context.Time:yyyy-MM-dd HH:mm:ss}")</MudTd>
-    <MudTd DataLabel="Instrument">@context.Name</MudTd>
-    <MudTd DataLabel="Size">@context.Size</MudTd>
-    <MudTd DataLabel="Side">@context.Side</MudTd>
-    <MudTd DataLabel="Open Price">@($"{context.Price:0.00}")</MudTd>
-    <MudTd DataLabel="Type">@context.Type</MudTd>
-  </RowTemplate>
+<MudDataGrid
+  Items="@Items"
+  Hover="true"
+  MultiSelection="true"
+  Filterable="true"
+  FilterMode="DataGridFilterMode.ColumnFilterMenu"
+  Hideable="true"
+  SortMode="SortMode.Multiple"
+  Groupable="true"
+  GroupExpanded="true">
+  <Columns>
+    <PropertyColumn Property="o => o.Time" Title="Time">
+      <CellTemplate>
+        @($"{context.Item.Time:yyyy-MM-dd HH:mm:ss}")
+      </CellTemplate>
+    </PropertyColumn>
+    <PropertyColumn Property="o => o.Name" Title="Instrument" Grouping GroupBy="new Func<OrderRecord, string>(o => o.Group)">
+      <GroupTemplate>
+        <span>Group: @context.Grouping.Key</span>
+      </GroupTemplate>
+    </PropertyColumn>
+    <PropertyColumn Property="o => o.Size" Title="Size" />
+    <PropertyColumn Property="o => o.Side" Title="Side" />
+    <PropertyColumn Property="o => o.Price" Title="Open Price">
+      <CellTemplate>
+        @($"{context.Item.Price:0.00}")
+      </CellTemplate>
+    </PropertyColumn>
+    <PropertyColumn Property="o => o.Type" Title="Type" />
+  </Columns>
   <PagerContent>
-    <MudTablePager PageSizeOptions="new int[]{50, 100}" />
+    <MudDataGridPager T="OrderRecord" />
   </PagerContent>
-</MudTable>
+</MudDataGrid>
