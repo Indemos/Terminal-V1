@@ -25,7 +25,7 @@ namespace Terminal.Components
       if (Update is null || Update.IsCompleted)
       {
         Items = [.. items.Select(GetRecord)];
-        Update = Task.WhenAll(InvokeAsync(StateHasChanged), Task.Delay(100));
+        Update = Task.WhenAll([InvokeAsync(StateHasChanged), Task.Delay(100)]);
       }
     }
 
