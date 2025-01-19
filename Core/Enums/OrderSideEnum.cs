@@ -4,6 +4,7 @@ namespace Terminal.Core.Enums
   {
     None,
     Buy,
-    Sell
+    Sell,
+    Group
   }
 }

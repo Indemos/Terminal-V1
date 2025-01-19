@@ -20,7 +20,6 @@
 
 @code {
 
-  protected object _sync = new object();
   protected DashboardTheme _theme = new();
 
   protected override void OnAfterRender(bool setup)
@@ -31,7 +30,7 @@
 
       InstanceService<MessageService>.Instance.OnMessage += o =>
       {
-        lock (_sync)
+        try
         {
           var code = o?.Code;
           var message = o?.Message;
@@ -51,6 +50,7 @@
             </ul>
           );
         }
+        catch (Exception) {}
       };
     }
   }

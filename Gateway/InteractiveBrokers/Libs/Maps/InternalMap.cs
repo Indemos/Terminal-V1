@@ -42,7 +42,6 @@ namespace InteractiveBrokers.Mappers
       {
         Instrument = instrument,
         Id = $"{message.Order.PermId}",
-        Descriptor = $"{message.Contract.ConId}",
         Volume = (double)Math.Min(message.Order.FilledQuantity, message.Order.TotalQuantity),
         Time = DateTime.TryParse(message.Order.ActiveStartTime, out var o) ? o : DateTime.UtcNow,
         Status = GetOrderStatus(message.OrderState.Status)
@@ -51,11 +50,11 @@ namespace InteractiveBrokers.Mappers
       var order = new OrderModel
       {
         Transaction = action,
+        Id = $"{message.OrderId}",
         Type = OrderTypeEnum.Market,
         Side = GetOrderSide(message.Order.Action),
         TimeSpan = GetTimeSpan($"{message.Order.Tif}"),
-        Volume = (double)message.Order.TotalQuantity,
-        Price = message.Order.LmtPrice
+        Volume = (double)message.Order.TotalQuantity
       };
 
       switch (message.Order.OrderType)
@@ -101,7 +100,7 @@ namespace InteractiveBrokers.Mappers
         Volume = volume,
         Transaction = action,
         Type = OrderTypeEnum.Market,
-        Price = message.AverageCost / Math.Max(1, instrument.Leverage.Value),
+        Price = message.AverageCost / (volume * Math.Max(1, instrument.Leverage.Value)),
         Side = message.Position > 0 ? OrderSideEnum.Buy : OrderSideEnum.Sell
       };
 

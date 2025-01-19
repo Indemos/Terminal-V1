@@ -80,7 +80,7 @@ namespace Alpaca.Mappers
 
       var action = new TransactionModel
       {
-        Id = message.ClientOrderId,
+        Id = $"{message.OrderId}",
         Instrument = instrument,
         Volume = GetValue(message.FilledQuantity, message.Quantity),
         Time = message.CreatedAtUtc,
@@ -94,7 +94,7 @@ namespace Alpaca.Mappers
         Side = GetOrderSide(message.OrderSide),
         TimeSpan = GetTimeSpan(message.TimeInForce),
         Volume = GetValue(message.Quantity, message.FilledQuantity),
-        Id = $"{message.OrderId}"
+        Id = message.ClientOrderId
       };
 
       switch (message.OrderType)

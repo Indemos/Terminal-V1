@@ -60,7 +60,7 @@ namespace Terminal.Pages.Gateways
     {
       var account = new Account
       {
-        Descriptor = Configuration["InteractiveBrokers:Account"],
+        Descriptor = Configuration["InteractiveBrokers:PaperAccount"],
         Instruments = new ConcurrentDictionary<string, InstrumentModel>
         {
           [Instrument.Name] = Instrument
@@ -70,7 +70,7 @@ namespace Terminal.Pages.Gateways
       View.Adapters["Prime"] = new Adapter
       {
         Account = account,
-        Port = int.Parse(Configuration["InteractiveBrokers:Port"])
+        Port = int.Parse(Configuration["InteractiveBrokers:PaperPort"])
       };
 
       Performance = new PerformanceIndicator { Name = "Balance" };

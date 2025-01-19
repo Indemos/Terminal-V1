@@ -1,7 +1,6 @@
 using Alpaca.Mappers;
 using Alpaca.Markets;
 using Distribution.Services;
-using Distribution.Stream;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -17,11 +16,6 @@ namespace Alpaca
 {
   public class Adapter : Gateway
   {
-    /// <summary>
-    /// HTTP service
-    /// </summary>
-    protected Service _sender;
-
     /// <summary>
     /// Trading client
     /// </summary>
@@ -45,12 +39,12 @@ namespace Alpaca
     /// <summary>
     /// Client ID
     /// </summary>
-    public virtual string ClientId { get; set; }
+    public virtual string Token { get; set; }
 
     /// <summary>
     /// Client secret
     /// </summary>
-    public virtual string ClientSecret { get; set; }
+    public virtual string Secret { get; set; }
 
     /// <summary>
     /// Environment
@@ -64,7 +58,6 @@ namespace Alpaca
     {
       Source = Environments.Paper;
 
-      _sender = new Service();
       _dataClients = new Dictionary<InstrumentEnum, IDisposable>();
       _streamingClients = new Dictionary<InstrumentEnum, IStreamingClient>();
       _subscriptions = new Dictionary<string, IList<IAlpacaDataSubscription>>();
@@ -81,7 +74,7 @@ namespace Alpaca
       {
         await Disconnect();
 
-        var creds = new SecretKey(ClientId, ClientSecret);
+        var creds = new SecretKey(Token, Secret);
 
         _tradingClient = Source.GetAlpacaTradingClient(creds);
         _dataClients[InstrumentEnum.Shares] = Source.GetAlpacaDataClient(creds);

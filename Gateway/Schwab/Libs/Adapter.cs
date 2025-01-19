@@ -54,7 +54,7 @@ namespace Schwab
     /// <summary>
     /// Disposable connections
     /// </summary>
-    protected IList<IDisposable> _connections;
+    protected IList<IDisposable> _subscriptions;
 
     /// <summary>
     /// Data source
@@ -95,7 +95,7 @@ namespace Schwab
       StreamUri = "wss://streamer-api.schwab.com/ws";
 
       _counter = 0;
-      _connections = [];
+      _subscriptions = [];
     }
 
     /// <summary>
@@ -107,29 +107,30 @@ namespace Schwab
 
       try
       {
-        var ws = new ClientWebSocket();
+        var sender = new Service();
+        var streamer = new ClientWebSocket();
         var scheduler = new ScheduleService();
+        var interval = new System.Timers.Timer(TimeSpan.FromMinutes(1));
 
         await Disconnect();
 
-        _sender = new Service();
+        _sender = sender;
+        _streamer = streamer;
 
-        await UpdateToken("/v1/oauth/token");
+        await UpdateToken($"{DataUri}/v1/oauth/token");
 
         _accountCode = (await GetAccountCode()).Data;
 
         await GetAccount([]);
-
-        _streamer = await GetConnection(ws, scheduler);
-
-        var interval = new System.Timers.Timer(TimeSpan.FromMinutes(1));
+        await GetConnection(streamer, scheduler);
 
         interval.Enabled = true;
-        interval.Elapsed += async (sender, e) => await UpdateToken("/v1/oauth/token");
+        interval.Elapsed += async (sender, e) => await UpdateToken($"{DataUri}/v1/oauth/token");
 
-        _connections.Add(_sender);
-        _connections.Add(_streamer);
-        _connections.Add(interval);
+        _subscriptions.Add(streamer);
+        _subscriptions.Add(sender);
+        _subscriptions.Add(interval);
+        _subscriptions.Add(scheduler);
 
         await Task.WhenAll(Account.Instruments.Values.Select(Subscribe));
 
@@ -239,8 +240,8 @@ namespace Schwab
 
       try
       {
-        _connections?.ForEach(o => o?.Dispose());
-        _connections?.Clear();
+        _subscriptions?.ForEach(o => o?.Dispose());
+        _subscriptions?.Clear();
 
         response.Data = StatusEnum.Success;
       }
@@ -288,7 +289,7 @@ namespace Schwab
 
         }.Merge(criteria);
 
-        var optionResponse = await SendData<OptionChainMessage>($"/marketdata/v1/chains?{props}");
+        var optionResponse = await Send<OptionChainMessage>($"{DataUri}/marketdata/v1/chains?{props}");
 
         response.Data = optionResponse
           .Data
@@ -329,7 +330,7 @@ namespace Schwab
 
         }.Merge(criteria);
 
-        var pointResponse = await SendData<Dictionary<string, AssetMessage>>($"/marketdata/v1/quotes?{props}");
+        var pointResponse = await Send<Dictionary<string, AssetMessage>>($"{DataUri}/marketdata/v1/quotes?{props}");
         var point = InternalMap.GetPrice(pointResponse.Data[props["symbols"]]);
 
         response.Data = new DomModel
@@ -347,7 +348,7 @@ namespace Schwab
     }
 
     /// <summary>
-    /// Get historical bars
+    /// Get historical ticks
     /// </summary>
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
@@ -367,7 +368,7 @@ namespace Schwab
 
         }.Merge(criteria);
 
-        var pointResponse = await SendData<BarsMessage>($"/marketdata/v1/pricehistory?{props}");
+        var pointResponse = await Send<BarsMessage>($"{DataUri}/marketdata/v1/pricehistory?{props}");
 
         response.Data = pointResponse
           .Data
@@ -446,7 +447,7 @@ namespace Schwab
       try
       {
         var accountProps = new Hashtable { ["fields"] = "positions" };
-        var account = await SendData<AccountsMessage>($"/trader/v1/accounts/{_accountCode}?{accountProps.Query()}");
+        var account = await Send<AccountsMessage>($"{DataUri}/trader/v1/accounts/{_accountCode}?{accountProps.Query()}");
         var orders = await GetOrders(null, criteria);
         var positions = await GetPositions(null, criteria);
 
@@ -490,7 +491,7 @@ namespace Schwab
 
         }.Merge(criteria);
 
-        var orders = await SendData<OrderMessage[]>($"/trader/v1/accounts/{_accountCode}/orders?{props}");
+        var orders = await Send<OrderMessage[]>($"{DataUri}/trader/v1/accounts/{_accountCode}/orders?{props}");
 
         response.Data = [.. orders
           .Data
@@ -518,7 +519,7 @@ namespace Schwab
       try
       {
         var props = new Hashtable { ["fields"] = "positions" }.Merge(criteria);
-        var account = await SendData<AccountsMessage>($"/trader/v1/accounts/{_accountCode}?{props}");
+        var account = await Send<AccountsMessage>($"{DataUri}/trader/v1/accounts/{_accountCode}?{props}");
 
         response.Data = [.. account
           .Data
@@ -545,7 +546,7 @@ namespace Schwab
 
       try
       {
-        var accountNumbers = await SendData<AccountNumberMessage[]>("/trader/v1/accounts/accountNumbers");
+        var accountNumbers = await Send<AccountNumberMessage[]>($"{DataUri}/trader/v1/accounts/accountNumbers");
 
         response.Data = accountNumbers.Data.First(o => Equals(o.AccountNumber, Account.Descriptor)).HashValue;
       }
@@ -560,16 +561,16 @@ namespace Schwab
     /// <summary>
     /// Send data to web socket stream
     /// </summary>
-    /// <param name="ws"></param>
+    /// <param name="streamer"></param>
     /// <param name="data"></param>
     /// <param name="cancellation"></param>
     /// <returns></returns>
-    protected virtual Task SendStream(ClientWebSocket ws, object data, CancellationTokenSource cancellation = null)
+    protected virtual Task SendStream(ClientWebSocket streamer, object data, CancellationTokenSource cancellation = null)
     {
       var content = JsonSerializer.Serialize(data, _sender.Options);
       var message = Encoding.ASCII.GetBytes(content);
 
-      return ws.SendAsync(
+      return streamer.SendAsync(
         message,
         WebSocketMessageType.Text,
         true,
@@ -580,14 +581,14 @@ namespace Schwab
     /// Read response from web socket
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="ws"></param>
+    /// <param name="streamer"></param>
     /// <param name="source"></param>
     /// <returns></returns>
-    protected virtual async Task<T> ReceiveStream<T>(ClientWebSocket ws, CancellationTokenSource source = null)
+    protected virtual async Task<T> ReceiveStream<T>(ClientWebSocket streamer, CancellationTokenSource source = null)
     {
       var cancellation = source?.Token ?? CancellationToken.None;
       var data = new byte[short.MaxValue];
-      var response = await ws.ReceiveAsync(data, cancellation);
+      var response = await streamer.ReceiveAsync(data, cancellation);
       var message = Encoding.ASCII.GetString(data, 0, response.Count);
 
       return JsonSerializer.Deserialize<T>(message, _sender.Options);
@@ -596,18 +597,18 @@ namespace Schwab
     /// <summary>
     /// Web socket stream
     /// </summary>
-    /// <param name="ws"></param>
+    /// <param name="streamer"></param>
     /// <param name="scheduler"></param>
     /// <returns></returns>
-    protected virtual async Task<ClientWebSocket> GetConnection(ClientWebSocket ws, ScheduleService scheduler)
+    protected virtual async Task<ClientWebSocket> GetConnection(ClientWebSocket streamer, ScheduleService scheduler)
     {
       var source = new UriBuilder(StreamUri);
       var cancellation = new CancellationTokenSource();
       var userData = await GetUserData();
       var streamData = userData.Data.Streamer.FirstOrDefault();
 
-      await ws.ConnectAsync(source.Uri, cancellation.Token);
-      await SendStream(ws, new StreamInputMessage
+      await streamer.ConnectAsync(source.Uri, cancellation.Token);
+      await SendStream(streamer, new StreamInputMessage
       {
         Service = "ADMIN",
         Command = "LOGIN",
@@ -622,7 +623,7 @@ namespace Schwab
         }
       });
 
-      var adminResponse = await ReceiveStream<StreamLoginResponseMessage>(ws);
+      var adminResponse = await ReceiveStream<StreamLoginResponseMessage>(streamer);
       var adminCode = adminResponse.Response.FirstOrDefault().Content.Code;
       var pointMap = Account
         .Instruments
@@ -631,12 +632,12 @@ namespace Schwab
 
       scheduler.Send(async () =>
       {
-        while (ws.State is WebSocketState.Open)
+        while (streamer.State is WebSocketState.Open)
         {
           try
           {
             var data = new byte[short.MaxValue];
-            var streamResponse = await ws.ReceiveAsync(data, cancellation.Token);
+            var streamResponse = await streamer.ReceiveAsync(data, cancellation.Token);
             var content = $"{Encoding.Default.GetString(data).Trim(['\0', '[', ']'])}";
             var message = JsonNode.Parse(content);
 
@@ -656,7 +657,7 @@ namespace Schwab
         }
       });
 
-      return ws;
+      return streamer;
     }
 
     /// <summary>
@@ -711,9 +712,9 @@ namespace Schwab
     /// <param name="verb"></param>
     /// <param name="content"></param>
     /// <returns></returns>
-    protected virtual async Task<Dis.ResponseModel<T>> SendData<T>(string source, HttpMethod verb = null, object content = null)
+    protected virtual async Task<Dis.ResponseModel<T>> Send<T>(string source, HttpMethod verb = null, object content = null)
     {
-      var uri = new UriBuilder(DataUri + source);
+      var uri = new UriBuilder(source);
       var message = new HttpRequestMessage { Method = verb ?? HttpMethod.Get };
 
       switch (true)
@@ -728,7 +729,14 @@ namespace Schwab
       message.RequestUri = uri.Uri;
       message.Headers.Add("Authorization", $"Bearer {AccessToken}");
 
-      return await _sender.Send<T>(message, _sender.Options);
+      var response = await _sender.Send<T>(message, _sender.Options);
+
+      if (response.Message.IsSuccessStatusCode is false)
+      {
+        throw new HttpRequestException(await response.Message.Content.ReadAsStringAsync(), null, response.Message.StatusCode);
+      }
+
+      return response;
     }
 
     /// <summary>
@@ -745,7 +753,7 @@ namespace Schwab
         ["refresh_token"] = RefreshToken
       };
 
-      var uri = new UriBuilder(DataUri + source);
+      var uri = new UriBuilder(source);
       var content = new FormUrlEncodedContent(props);
       var message = new HttpRequestMessage();
       var basicToken = Encoding.UTF8.GetBytes($"{ClientId}:{ClientSecret}");
@@ -773,7 +781,7 @@ namespace Schwab
     protected async Task<ResponseModel<UserDataMessage>> GetUserData()
     {
       var response = new ResponseModel<UserDataMessage>();
-      var userResponse = await SendData<UserDataMessage>($"/trader/v1/userPreference");
+      var userResponse = await Send<UserDataMessage>($"{DataUri}/trader/v1/userPreference");
 
       if (string.IsNullOrEmpty(userResponse.Error) is false)
       {
@@ -798,7 +806,7 @@ namespace Schwab
 
       var exOrder = ExternalMap.GetOrder(order);
       var response = new ResponseModel<OrderModel>();
-      var exResponse = await SendData<OrderMessage>($"/trader/v1/accounts/{_accountCode}/orders", HttpMethod.Post, exOrder);
+      var exResponse = await Send<OrderMessage>($"{DataUri}/trader/v1/accounts/{_accountCode}/orders", HttpMethod.Post, exOrder);
 
       if (exResponse.Message.Headers.TryGetValues("Location", out var orderData))
       {
@@ -827,7 +835,7 @@ namespace Schwab
     protected virtual async Task<ResponseModel<OrderModel>> DeleteOrder(OrderModel order)
     {
       var response = new ResponseModel<OrderModel>();
-      var exResponse = await SendData<OrderMessage>($"/trader/v1/accounts/{_accountCode}/orders/{order.Transaction.Id}", HttpMethod.Delete);
+      var exResponse = await Send<OrderMessage>($"{DataUri}/trader/v1/accounts/{_accountCode}/orders/{order.Transaction.Id}", HttpMethod.Delete);
 
       if ((int)exResponse.Message.StatusCode >= 400)
       {

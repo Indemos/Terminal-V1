@@ -19,6 +19,7 @@
     <ProjectReference Include="..\Gateway\InteractiveBrokers\Libs\InteractiveBrokers.csproj" />
     <ProjectReference Include="..\Gateway\Schwab\Libs\Schwab.csproj" />
     <ProjectReference Include="..\Gateway\Simulation\Libs\Simulation.csproj" />
+    <ProjectReference Include="..\Gateway\Tradier\Libs\Tradier.csproj" />
   </ItemGroup>
 
 </Project>

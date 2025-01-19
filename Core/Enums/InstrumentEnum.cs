@@ -3,6 +3,7 @@ namespace Terminal.Core.Enums
   public enum InstrumentEnum : byte
   {
     None,
+    Group,
     Bonds,
     Coins,
     Shares,

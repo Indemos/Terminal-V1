@@ -8,8 +8,6 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.ServiceModel.Channels;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
@@ -37,11 +35,6 @@ namespace InteractiveBrokers
     /// IB client
     /// </summary>
     protected IBClient _client;
-
-    /// <summary>
-    /// Disposable connections
-    /// </summary>
-    protected IList<IDisposable> _connections;
 
     /// <summary>
     /// Asset subscriptions
@@ -80,7 +73,6 @@ namespace InteractiveBrokers
 
       _order = 1;
       _counter = 1;
-      _connections = [];
       _subscriptions = new ConcurrentDictionary<string, int>();
     }
 
@@ -158,8 +150,6 @@ namespace InteractiveBrokers
       {
         _client?.ClientSocket?.eDisconnect();
         _client?.Dispose();
-        _connections?.ForEach(o => o?.Dispose());
-        _connections?.Clear();
 
         response.Data = StatusEnum.Success;
       }
@@ -425,7 +415,7 @@ namespace InteractiveBrokers
         switch (true)
         {
           case true when Equals(code, (int)ClientErrorEnum.NoConnection):
-          case true when Equals(code, (int)ClientErrorEnum.ConnectionError): await Connect(); break;
+          case true when Equals(code, (int)ClientErrorEnum.ConnectionError): await Connect(); await Task.Delay(1000); break;
         }
 
         var content = new MessageModel<string>
@@ -786,6 +776,7 @@ namespace InteractiveBrokers
         _client.ClientSocket.placeOrder(exOrder.Order.OrderId, exOrder.Contract, exOrder.Order);
 
         await await Task.WhenAny(source.Task, Task.Delay(Timeout).ContinueWith(o => unsubscribe()));
+        await Task.Delay(Interval);
       }
 
       response.Data = order;

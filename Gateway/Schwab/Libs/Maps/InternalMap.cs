@@ -17,7 +17,7 @@ namespace Schwab.Mappers
     /// <returns></returns>
     public static IDictionary<string, string> GetStreamMap(string assetType)
     {
-      switch (assetType)
+      switch (assetType?.ToUpper())
       {
         case "LEVELONE_EQUITIES": return StreamEquityMap.Map;
         case "LEVELONE_FUTURES": return StreamFutureMap.Map;
@@ -36,7 +36,7 @@ namespace Schwab.Mappers
     /// <returns></returns>
     public static InstrumentEnum? GetSubscriptionType(string assetType)
     {
-      switch (assetType)
+      switch (assetType?.ToUpper())
       {
         case "LEVELONE_EQUITIES": return InstrumentEnum.Shares;
         case "LEVELONE_FUTURES": return InstrumentEnum.Futures;
@@ -55,7 +55,7 @@ namespace Schwab.Mappers
     /// <returns></returns>
     public static InstrumentEnum? GetInstrumentType(string assetType)
     {
-      switch (assetType)
+      switch (assetType?.ToUpper())
       {
         case "COE":
         case "ETF":
@@ -72,7 +72,7 @@ namespace Schwab.Mappers
         case "OPTION": return InstrumentEnum.Options;
       }
 
-      return null;
+      return InstrumentEnum.Group;
     }
 
     /// <summary>
@@ -82,7 +82,7 @@ namespace Schwab.Mappers
     /// <returns></returns>
     public static InstrumentEnum? GetOptionType(string assetType)
     {
-      switch (assetType)
+      switch (assetType?.ToUpper())
       {
         case "COE":
         case "ETF":
@@ -313,15 +313,20 @@ namespace Schwab.Mappers
     public static OrderModel GetOrder(OrderMessage message)
     {
       var subOrders = message?.OrderLegCollection ?? [];
+      var basis = new InstrumentModel
+      {
+        Name = string.Join(" / ", subOrders.Select(o => o?.Instrument?.Symbol).Distinct())
+      };
+
       var instrument = new InstrumentModel
       {
-        Name = string.Join($" / ", subOrders.Select(o => o?.Instrument?.Symbol))
+        Basis = basis,
+        Name = string.Join(" / ", subOrders.Select(o => o?.Instrument?.Symbol))
       };
 
       var action = new TransactionModel
       {
         Id = message.OrderId,
-        Descriptor = message.OrderId,
         Instrument = instrument,
         Volume = GetValue(message.FilledQuantity, message.Quantity),
         Time = message.EnteredTime,
@@ -368,10 +373,10 @@ namespace Schwab.Mappers
 
         foreach (var subOrder in subOrders)
         {
-          var instrumentType = GetInstrumentType(subOrder.Instrument.AssetType);
           var subInstrument = new InstrumentModel
           {
-            Name = subOrder.Instrument.Symbol
+            Name = subOrder.Instrument.Symbol,
+            Type = GetInstrumentType(subOrder.Instrument.AssetType)
           };
 
           var subAction = new TransactionModel
@@ -403,11 +408,11 @@ namespace Schwab.Mappers
       {
         case "FILLED":
         case "REPLACED": return OrderStatusEnum.Filled;
-        case "WORKING": return OrderStatusEnum.Partitioned;
         case "REJECTED":
         case "CANCELED":
         case "EXPIRED": return OrderStatusEnum.Canceled;
         case "NEW":
+        case "WORKING":
         case "PENDING_RECALL":
         case "PENDING_CANCEL":
         case "PENDING_REPLACE":
@@ -430,17 +435,12 @@ namespace Schwab.Mappers
     /// <returns></returns>
     public static OrderSideEnum? GetOrderSide(OrderMessage message)
     {
-      switch (message.OrderType.ToUpper())
+      if (message?.OrderLegCollection?.Count > 0)
       {
-        case "NET_DEBIT": return OrderSideEnum.Buy;
-        case "NET_CREDIT": return OrderSideEnum.Sell;
+        return OrderSideEnum.Group;
       }
 
-      var position = message
-        ?.OrderLegCollection
-        ?.FirstOrDefault();
-
-      return GetSubOrderSide(position.Instruction);
+      return GetSubOrderSide(message?.OrderType);
     }
 
     /// <summary>

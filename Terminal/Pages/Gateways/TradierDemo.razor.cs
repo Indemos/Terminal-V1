@@ -1,5 +1,3 @@
-using Alpaca;
-using Alpaca.Markets;
 using Canvas.Core.Shapes;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
@@ -13,10 +11,11 @@ using Terminal.Core.Enums;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
 using Terminal.Services;
+using Tradier;
 
 namespace Terminal.Pages.Gateways
 {
-  public partial class AlpacaDemo
+  public partial class TradierDemo
   {
     [Inject] IConfiguration Configuration { get; set; }
 
@@ -24,8 +23,8 @@ namespace Terminal.Pages.Gateways
     protected PerformanceIndicator Performance { get; set; }
     protected InstrumentModel Instrument { get; set; } = new InstrumentModel
     {
-      Name = "DOGE/USD",
-      Type = InstrumentEnum.Coins,
+      Name = "SPY",
+      Type = InstrumentEnum.Shares,
       TimeFrame = TimeSpan.FromMinutes(1)
     };
 
@@ -59,7 +58,7 @@ namespace Terminal.Pages.Gateways
     {
       var account = new Account
       {
-        Descriptor = "Demo",
+        Descriptor = Configuration["Tradier:PaperAccount"],
         Instruments = new ConcurrentDictionary<string, InstrumentModel>
         {
           [Instrument.Name] = Instrument
@@ -69,9 +68,8 @@ namespace Terminal.Pages.Gateways
       View.Adapters["Prime"] = new Adapter
       {
         Account = account,
-        Source = Environments.Paper,
-        Token = Configuration["Alpaca:PaperToken"],
-        Secret = Configuration["Alpaca:PaperSecret"]
+        Token = Configuration["Tradier:PaperToken"],
+        SessionToken = Configuration["Tradier:Token"]
       };
 
       Performance = new PerformanceIndicator { Name = "Balance" };
