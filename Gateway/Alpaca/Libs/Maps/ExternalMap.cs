@@ -16,7 +16,7 @@ namespace Alpaca.Mappers
     {
       var action = order.Transaction;
       var name = action.Instrument.Name;
-      var side = order.Side is OrderSideEnum.Buy ? OrderSide.Buy : OrderSide.Sell;
+      var side = order.Side is OrderSideEnum.Long ? OrderSide.Buy : OrderSide.Sell;
       var orderType = GetOrderType(order.Type);
       var duration = GetTimeSpan(order.TimeSpan);
       var volume = OrderQuantity.Fractional((decimal)order.Volume);
@@ -58,7 +58,7 @@ namespace Alpaca.Mappers
     /// <returns></returns>
     public static OrderSide GetSide(OrderSideEnum? side)
     {
-      if (side is OrderSideEnum.Sell)
+      if (side is OrderSideEnum.Short)
       {
         return OrderSide.Sell;
       }

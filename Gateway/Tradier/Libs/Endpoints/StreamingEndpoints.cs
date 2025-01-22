@@ -2,23 +2,21 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Tradier.Messages;
 
-namespace Tradier.Endpoints
+namespace Tradier
 {
-  public class StreamingEndpoints
+  public partial class Adapter
   {
-    public Adapter Adapter { get; set; }
-
     public async Task<SessionMessage> GetMarketSession()
     {
-      var uri = $"{Adapter.SessionUri}/markets/events/session";
-      var response = await Adapter.Send<SessionMessage>(uri, HttpMethod.Post, null, Adapter.SessionToken);
+      var uri = $"{SessionUri}/markets/events/session";
+      var response = await Send<SessionMessage>($"{SessionUri}/markets/events/session", HttpMethod.Post, null, SessionToken);
       return response.Data;
     }
 
     public async Task<SessionMessage> GetAccountSession()
     {
-      var uri = $"{Adapter.SessionUri}/accounts/events/session";
-      var response = await Adapter.Send<SessionMessage>(uri, HttpMethod.Post, null, Adapter.SessionToken);
+      var uri = $"{SessionUri}/accounts/events/session";
+      var response = await Send<SessionMessage>($"{SessionUri}/accounts/events/session", HttpMethod.Post, null, SessionToken);
       return response.Data;
     }
   }

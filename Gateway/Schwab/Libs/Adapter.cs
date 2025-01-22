@@ -331,7 +331,7 @@ namespace Schwab
         }.Merge(criteria);
 
         var pointResponse = await Send<Dictionary<string, AssetMessage>>($"{DataUri}/marketdata/v1/quotes?{props}");
-        var point = InternalMap.GetPrice(pointResponse.Data[props["symbols"]]);
+        var point = InternalMap.GetPrice(pointResponse.Data[props["symbols"]], screener.Instrument);
 
         response.Data = new DomModel
         {
@@ -373,7 +373,7 @@ namespace Schwab
         response.Data = pointResponse
           .Data
           .Bars
-          ?.Select(InternalMap.GetBar)?.ToList() ?? [];
+          ?.Select(InternalMap.GetPrice)?.ToList() ?? [];
       }
       catch (Exception e)
       {

@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <PackageReference Include="Distribution.Stream" Version="1.2.4" />
-    <PackageReference Include="tradier-dotnet-client" Version="1.0.11" />
   </ItemGroup>
 
   <ItemGroup>

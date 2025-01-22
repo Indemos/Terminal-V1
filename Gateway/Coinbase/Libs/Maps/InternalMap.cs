@@ -138,8 +138,8 @@ namespace Coinbase.Mappers
     {
       switch (side)
       {
-        case "buy": return OrderSideEnum.Buy;
-        case "sell": return OrderSideEnum.Sell;
+        case "buy": return OrderSideEnum.Long;
+        case "sell": return OrderSideEnum.Short;
       }
 
       return OrderSideEnum.None;
@@ -154,8 +154,8 @@ namespace Coinbase.Mappers
     {
       switch (side)
       {
-        case "long": return OrderSideEnum.Buy;
-        case "short": return OrderSideEnum.Sell;
+        case "long": return OrderSideEnum.Long;
+        case "short": return OrderSideEnum.Short;
       }
 
       return OrderSideEnum.None;

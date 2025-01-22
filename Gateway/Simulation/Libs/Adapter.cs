@@ -362,7 +362,7 @@ namespace Simulation
         case true when previousVolume < updateVolume:
           nextOrder.Price = update.Price;
           nextOrder.Transaction.Price = update.Price;
-          nextOrder.Side = nextOrder.Side is OrderSideEnum.Buy ? OrderSideEnum.Sell : OrderSideEnum.Buy;
+          nextOrder.Side = nextOrder.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long;
           previousOrder.Volume = previousVolume;
           previousOrder.Transaction.Volume = previousVolume;
           break;
@@ -405,15 +405,15 @@ namespace Simulation
     {
       var isExecutable = false;
       var point = order.Transaction.Instrument.Point;
-      var isBuyStopLimit = order.Side is OrderSideEnum.Buy && order.Type is OrderTypeEnum.StopLimit && point.Ask >= order.ActivationPrice;
-      var isSellStopLimit = order.Side is OrderSideEnum.Sell && order.Type is OrderTypeEnum.StopLimit && point.Bid <= order.ActivationPrice;
+      var isBuyStopLimit = order.Side is OrderSideEnum.Long && order.Type is OrderTypeEnum.StopLimit && point.Ask >= order.ActivationPrice;
+      var isSellStopLimit = order.Side is OrderSideEnum.Short && order.Type is OrderTypeEnum.StopLimit && point.Bid <= order.ActivationPrice;
 
       order.Type = isBuyStopLimit || isSellStopLimit ? OrderTypeEnum.Limit : order.Type;
 
-      var isBuyStop = order.Side is OrderSideEnum.Buy && order.Type is OrderTypeEnum.Stop;
-      var isSellStop = order.Side is OrderSideEnum.Sell && order.Type is OrderTypeEnum.Stop;
-      var isBuyLimit = order.Side is OrderSideEnum.Buy && order.Type is OrderTypeEnum.Limit;
-      var isSellLimit = order.Side is OrderSideEnum.Sell && order.Type is OrderTypeEnum.Limit;
+      var isBuyStop = order.Side is OrderSideEnum.Long && order.Type is OrderTypeEnum.Stop;
+      var isSellStop = order.Side is OrderSideEnum.Short && order.Type is OrderTypeEnum.Stop;
+      var isBuyLimit = order.Side is OrderSideEnum.Long && order.Type is OrderTypeEnum.Limit;
+      var isSellLimit = order.Side is OrderSideEnum.Short && order.Type is OrderTypeEnum.Limit;
 
       isExecutable = isBuyStop || isSellLimit ? point.Ask >= order.Price : isExecutable;
       isExecutable = isSellStop || isBuyLimit ? point.Bid <= order.Price : isExecutable;

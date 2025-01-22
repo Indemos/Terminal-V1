@@ -275,7 +275,7 @@ namespace InteractiveBrokers
         {
           if (Equals(id, message.ReqId))
           {
-            response.Data = [.. message.Items.Select(InternalMap.GetPrice)];
+            response.Data = [.. message.Items.Select(o => InternalMap.GetPrice(o, instrument))];
             unsubscribe();
           }
         }

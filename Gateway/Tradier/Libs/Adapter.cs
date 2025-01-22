@@ -16,15 +16,15 @@ using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 using Terminal.Core.Services;
-using Tradier.Client;
-using Tradier.Endpoints;
+using Tradier.Messages.Account;
+using Tradier.Messages.MarketData;
 using Tradier.Mappers;
 using Tradier.Messages;
 using Dis = Distribution.Stream.Models;
 
 namespace Tradier
 {
-  public class Adapter : Gateway
+  public partial class Adapter : Gateway
   {
     /// <summary>
     /// HTTP client
@@ -82,11 +82,6 @@ namespace Tradier
     public string SessionUri { get; set; }
 
     /// <summary>
-    /// Client
-    /// </summary>
-    public TradierClient Client { get; protected set; }
-
-    /// <summary>
     /// Constructor
     /// </summary>
     public Adapter()
@@ -108,17 +103,14 @@ namespace Tradier
         var scheduler = new ScheduleService();
         var dataStreamer = new ClientWebSocket();
         var accountStreamer = new ClientWebSocket();
-        var streamingEndpoints = new StreamingEndpoints { Adapter = this };
 
         await Disconnect();
-
-        Client = new TradierClient(Token, Account.Descriptor);
 
         _sender = sender;
         _dataStreamer = dataStreamer;
         _accountStreamer = accountStreamer;
-        _dataSession = $"{(await streamingEndpoints.GetMarketSession())?.Stream?.Session}";
-        _accountSession = $"{(await streamingEndpoints.GetAccountSession())?.Stream?.Session}";
+        _dataSession = (await GetMarketSession())?.Stream?.Session;
+        _accountSession = (await GetAccountSession()).Stream?.Session;
 
         await GetAccount([]);
         await GetConnection("/v1/markets/events", dataStreamer, scheduler, message =>
@@ -128,7 +120,7 @@ namespace Tradier
             case "quote":
 
               var quoteMessage = message.Deserialize<QuoteMessage>();
-              var point = InternalMap.GetPoint(quoteMessage);
+              var point = InternalMap.GetPrice(quoteMessage);
               var instrument = Account.Instruments[quoteMessage.Symbol];
 
               point.Instrument = instrument;
@@ -218,7 +210,7 @@ namespace Tradier
           Session = _dataSession
         };
 
-        var accountMessage = new AccountMessage
+        var accountMessage = new Messages.AccountMessage
         {
           Events = ["order"],
           Session = _accountSession
@@ -262,15 +254,17 @@ namespace Tradier
 
       try
       {
-        var account = await Client.Account.GetBalances();
-        var orders = (await Client.Account.GetOrders(Account.Descriptor))?.Order?.Select(InternalMap.GetOrder) ?? [];
-        var positions = (await Client.Account.GetPositions(Account.Descriptor))?.Position?.Select(InternalMap.GetPosition) ?? [];
+        var num = Account.Descriptor;
+        var account = await GetBalances(num);
+        var orders = await GetOrders(null, criteria);
+        var positions = await GetPositions(null, criteria);
 
         Account.Balance = account.TotalEquity;
-        Account.Orders = orders.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
-        Account.Positions = positions.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
+        Account.Orders = orders.Data.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
+        Account.Positions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
 
         positions
+          .Data
           .Where(o => Account.Instruments.ContainsKey(o.Name) is false)
           .ForEach(o => Account.Instruments[o.Name] = o.Transaction.Instrument);
 
@@ -290,9 +284,28 @@ namespace Tradier
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<DomModel>> GetDom(PointScreenerModel args, Hashtable criteria)
+    public override async Task<ResponseModel<DomModel>> GetDom(PointScreenerModel screener, Hashtable criteria)
     {
-      throw new NotImplementedException();
+      var response = new ResponseModel<DomModel>();
+
+      try
+      {
+        var name = screener.Instrument.Name;
+        var pointResponse = await GetQuotes([name], true);
+        var point = InternalMap.GetPrice(pointResponse?.Items?.FirstOrDefault());
+
+        response.Data = new DomModel
+        {
+          Asks = [point],
+          Bids = [point]
+        };
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
+
+      return response;
     }
 
     /// <summary>
@@ -301,7 +314,7 @@ namespace Tradier
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenerModel args, Hashtable criteria)
+    public override Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenerModel screener, Hashtable criteria)
     {
       throw new NotImplementedException();
     }
@@ -312,9 +325,28 @@ namespace Tradier
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<InstrumentModel>>> GetOptions(InstrumentScreenerModel args, Hashtable criteria)
+    public override async Task<ResponseModel<IList<InstrumentModel>>> GetOptions(InstrumentScreenerModel screener, Hashtable criteria)
     {
-      throw new NotImplementedException();
+      var response = new ResponseModel<IList<InstrumentModel>>();
+
+      try
+      {
+        var optionResponse = await GetOptionChain(screener.Instrument.Name, screener.MaxDate ?? screener.MinDate);
+
+        response.Data = optionResponse
+          .Options
+          ?.Select(InternalMap.GetOption)
+          ?.OrderBy(o => o.Derivative.ExpirationDate)
+          ?.ThenBy(o => o.Derivative.Strike)
+          ?.ThenBy(o => o.Derivative.Side)
+          ?.ToList() ?? [];
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
+
+      return response;
     }
 
     /// <summary>
@@ -323,9 +355,20 @@ namespace Tradier
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<OrderModel>>> GetPositions(PositionScreenerModel args, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OrderModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria)
     {
-      throw new NotImplementedException();
+      var response = new ResponseModel<IList<OrderModel>>();
+
+      try
+      {
+        response.Data = [.. (await GetPositions(Account.Descriptor))?.Items?.Select(InternalMap.GetPosition)];
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
+
+      return response;
     }
 
     /// <summary>
@@ -334,9 +377,21 @@ namespace Tradier
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenerModel args, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenerModel screener, Hashtable criteria)
     {
-      throw new NotImplementedException();
+      var response = new ResponseModel<IList<OrderModel>>();
+
+      try
+      {
+        response.Data = [.. (await GetOrders(Account.Descriptor))?.Items?.Select(InternalMap.GetOrder)];
+
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
+
+      return response;
     }
 
     /// <summary>
@@ -344,9 +399,28 @@ namespace Tradier
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders)
     {
-      throw new NotImplementedException();
+      var response = new ResponseModel<IList<OrderModel>> { Data = [] };
+
+      foreach (var order in orders)
+      {
+        try
+        {
+          if (Equals((await SendGroupOrder(order)).Status, "ok"))
+          {
+            response.Data.Add(order);
+          }
+        }
+        catch (Exception e)
+        {
+          response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+        }
+      }
+
+      await GetAccount([]);
+
+      return response;
     }
 
     /// <summary>
@@ -354,9 +428,28 @@ namespace Tradier
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<OrderModel>>> DeleteOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<IList<OrderModel>>> DeleteOrders(params OrderModel[] orders)
     {
-      throw new NotImplementedException();
+      var response = new ResponseModel<IList<OrderModel>> { Data = [] };
+
+      foreach (var order in orders)
+      {
+        try
+        {
+          if (Equals((await DeleteOrder(order.Transaction.Id)).Status, "ok"))
+          {
+            response.Data.Add(order);
+          }
+        }
+        catch (Exception e)
+        {
+          response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+        }
+      }
+
+      await GetAccount([]);
+
+      return response;
     }
 
     /// <summary>

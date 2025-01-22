@@ -23,10 +23,9 @@ namespace Alpaca.Mappers
         AskSize = (double)message.AskSize,
         BidSize = (double)message.BidSize,
         Last = (double)message.BidPrice,
-        Time = message.TimestampUtc
+        Time = message.TimestampUtc,
+        Instrument = instrument
       };
-
-      point.Instrument = instrument;
 
       return point;
     }
@@ -200,11 +199,11 @@ namespace Alpaca.Mappers
     {
       switch (side)
       {
-        case OrderSide.Buy: return OrderSideEnum.Buy;
-        case OrderSide.Sell: return OrderSideEnum.Sell;
+        case OrderSide.Buy: return OrderSideEnum.Long;
+        case OrderSide.Sell: return OrderSideEnum.Short;
       }
 
-      return null;
+      return OrderSideEnum.Group;
     }
 
     /// <summary>
@@ -216,8 +215,8 @@ namespace Alpaca.Mappers
     {
       switch (side)
       {
-        case TakerSide.Buy: return OrderSideEnum.Buy;
-        case TakerSide.Sell: return OrderSideEnum.Sell;
+        case TakerSide.Buy: return OrderSideEnum.Long;
+        case TakerSide.Sell: return OrderSideEnum.Short;
       }
 
       return null;
@@ -232,8 +231,8 @@ namespace Alpaca.Mappers
     {
       switch (side)
       {
-        case PositionSide.Long: return OrderSideEnum.Buy;
-        case PositionSide.Short: return OrderSideEnum.Sell;
+        case PositionSide.Long: return OrderSideEnum.Long;
+        case PositionSide.Short: return OrderSideEnum.Short;
       }
 
       return null;

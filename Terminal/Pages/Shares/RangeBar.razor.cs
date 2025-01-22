@@ -111,12 +111,12 @@ namespace Terminal.Pages.Shares
 
       if (Math.Abs((point.Last - Price).Value) > step)
       {
-        var side = OrderSideEnum.Buy;
+        var side = OrderSideEnum.Long;
         var position = account.Positions.FirstOrDefault().Value;
 
         if (point.Last < Price)
         {
-          side = OrderSideEnum.Sell;
+          side = OrderSideEnum.Short;
         }
 
         if (position is not null && Equals(side, position.Side) is false)

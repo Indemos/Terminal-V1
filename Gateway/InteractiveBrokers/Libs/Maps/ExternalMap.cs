@@ -44,8 +44,8 @@ namespace InteractiveBrokers.Mappers
           break;
       }
 
-      var TP = GetBracePrice(orderModel, orderModel.Side is OrderSideEnum.Buy ? 1 : -1);
-      var SL = GetBracePrice(orderModel, orderModel.Side is OrderSideEnum.Buy ? -1 : 1);
+      var TP = GetBracePrice(orderModel, orderModel.Side is OrderSideEnum.Long ? 1 : -1);
+      var SL = GetBracePrice(orderModel, orderModel.Side is OrderSideEnum.Long ? -1 : 1);
 
       response = [.. GetBraces(order, SL, TP).Select(o => new OpenOrderMessage
       {
@@ -120,8 +120,8 @@ namespace InteractiveBrokers.Mappers
     {
       switch (side)
       {
-        case OrderSideEnum.Buy: return "BUY";
-        case OrderSideEnum.Sell: return "SELL";
+        case OrderSideEnum.Long: return "BUY";
+        case OrderSideEnum.Short: return "SELL";
       }
 
       return null;

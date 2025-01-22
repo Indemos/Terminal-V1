@@ -148,14 +148,14 @@ namespace Terminal.Components
       var posCalls = optionPositions.Where(o => o.Transaction.Instrument.Derivative.Side is OptionSideEnum.Call);
 
       var longs = basisPositions
-        .Where(o => o.Side is OrderSideEnum.Buy)
-        .Concat(posCalls.Where(o => o.Side is OrderSideEnum.Buy))
-        .Concat(posPuts.Where(o => o.Side is OrderSideEnum.Sell));
+        .Where(o => o.Side is OrderSideEnum.Long)
+        .Concat(posCalls.Where(o => o.Side is OrderSideEnum.Long))
+        .Concat(posPuts.Where(o => o.Side is OrderSideEnum.Short));
 
       var shorts = basisPositions
-        .Where(o => o.Side is OrderSideEnum.Sell)
-        .Concat(posPuts.Where(o => o.Side is OrderSideEnum.Buy))
-        .Concat(posCalls.Where(o => o.Side is OrderSideEnum.Sell));
+        .Where(o => o.Side is OrderSideEnum.Short)
+        .Concat(posPuts.Where(o => o.Side is OrderSideEnum.Long))
+        .Concat(posCalls.Where(o => o.Side is OrderSideEnum.Short));
 
       PositionsView.UpdateItems(point.Time.Value.Ticks, "Assets", "BasisDelta", new AreaShape { Y = basisPositions.Sum(TradeService.GetDelta), Component = comUp });
       PositionsView.UpdateItems(point.Time.Value.Ticks, "Assets", "OptionDelta", new AreaShape { Y = optionPositions.Sum(TradeService.GetDelta), Component = comDown });

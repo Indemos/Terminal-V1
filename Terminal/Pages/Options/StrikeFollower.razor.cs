@@ -149,7 +149,7 @@ namespace Terminal.Pages.Options
       var order = new OrderModel
       {
         Volume = 1,
-        Side = OrderSideEnum.Buy,
+        Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
         Transaction = new() { Instrument = nextOption }
       };

@@ -23,7 +23,7 @@ namespace Terminal.Services
       var volume = o.Volume;
       var units = o.Transaction?.Instrument?.Leverage;
       var delta = o.Transaction?.Instrument?.Derivative?.Variance?.Delta;
-      var side = o.Side is OrderSideEnum.Buy ? 1.0 : -1.0;
+      var side = o.Side is OrderSideEnum.Long ? 1.0 : -1.0;
 
       return ((delta ?? volume) * units * side) ?? 0;
     }
@@ -36,7 +36,7 @@ namespace Terminal.Services
     /// <returns></returns>
     public static double GetEstimate(double price, DateTime date, OptionInputModel inputModel)
     {
-      var direction = inputModel.Position is OrderSideEnum.Buy ? 1.0 : -1.0;
+      var direction = inputModel.Position is OrderSideEnum.Long ? 1.0 : -1.0;
 
       if (inputModel.Side is not OptionSideEnum.Put && inputModel.Side is not OptionSideEnum.Call)
       {
@@ -83,7 +83,7 @@ namespace Terminal.Services
         var order = new OrderModel
         {
           Volume = position.Volume,
-          Side = position.Side is OrderSideEnum.Buy ? OrderSideEnum.Sell : OrderSideEnum.Buy,
+          Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
           Type = OrderTypeEnum.Market,
           Transaction = new()
           {
@@ -145,28 +145,28 @@ namespace Terminal.Services
           new OrderModel
           {
             Volume = 1,
-            Side = OrderSideEnum.Buy,
+            Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = longPut }
           },
           new OrderModel
           {
             Volume = 1,
-            Side = OrderSideEnum.Buy,
+            Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = longCall }
           },
           new OrderModel
           {
             Volume = 1,
-            Side = OrderSideEnum.Sell,
+            Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = shortPut }
           },
           new OrderModel
           {
             Volume = 1,
-            Side = OrderSideEnum.Sell,
+            Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = shortCall }
           }
@@ -209,7 +209,7 @@ namespace Terminal.Services
           new OrderModel
           {
             Volume = 1,
-            Side = OrderSideEnum.Sell,
+            Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
             Price = shortPut.Point.Bid,
             Transaction = new() { Instrument = shortPut }
@@ -217,7 +217,7 @@ namespace Terminal.Services
           new OrderModel
           {
             Volume = 1,
-            Side = OrderSideEnum.Sell,
+            Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
             Price = shortCall.Point.Bid,
             Transaction = new() { Instrument = shortCall }
@@ -257,7 +257,7 @@ namespace Terminal.Services
         {
           Volume = Math.Abs(delta),
           Type = OrderTypeEnum.Market,
-          Side = delta < 0 ? OrderSideEnum.Buy : OrderSideEnum.Sell,
+          Side = delta < 0 ? OrderSideEnum.Long : OrderSideEnum.Short,
           Transaction = new() { Instrument = point.Instrument }
         };
 
@@ -296,7 +296,7 @@ namespace Terminal.Services
         {
           Volume = 100,
           Type = OrderTypeEnum.Market,
-          Side = optionDelta > 0 ? OrderSideEnum.Buy : OrderSideEnum.Sell,
+          Side = optionDelta > 0 ? OrderSideEnum.Long : OrderSideEnum.Short,
           Transaction = new() { Instrument = point.Instrument }
         };
 
@@ -326,13 +326,13 @@ namespace Terminal.Services
           new OrderModel
           {
             Volume = 1,
-            Side = OrderSideEnum.Sell,
+            Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side
           },
           new OrderModel
           {
             Volume = 1,
-            Side = OrderSideEnum.Buy,
+            Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side
           }
         ]
@@ -388,13 +388,13 @@ namespace Terminal.Services
           new OrderModel
           {
             Volume = 1,
-            Side = OrderSideEnum.Buy,
+            Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side
           },
           new OrderModel
           {
             Volume = 1,
-            Side = OrderSideEnum.Sell,
+            Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side
           }
         ]
@@ -454,13 +454,13 @@ namespace Terminal.Services
           new OrderModel
           {
             Volume = 2,
-            Side = OrderSideEnum.Buy,
+            Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side
           },
           new OrderModel
           {
             Volume = 1,
-            Side = OrderSideEnum.Sell,
+            Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side
           }
         ]

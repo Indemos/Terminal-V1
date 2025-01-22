@@ -20,7 +20,7 @@ namespace Derivative.Pages.Popups
       Amount = 1,
       Date = DateTime.Now.Date,
       Side = OptionSideEnum.Call,
-      Position = OrderSideEnum.Buy
+      Position = OrderSideEnum.Long
     };
 
     protected EditContext InputContext { get; set; }

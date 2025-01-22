@@ -19,8 +19,8 @@
         <MudSelectItem T="OptionSideEnum" Value="@(OptionSideEnum.Share)" />
       </MudSelect>
       <MudSelect Label="Direction" Variant="Variant.Text" Margin="Margin.Dense" Class="mt-3" @bind-Value="InputModel.Position" For="@(() => InputModel.Position)">
-        <MudSelectItem T="OrderSideEnum" Value="@(OrderSideEnum.Buy)" />
-        <MudSelectItem T="OrderSideEnum" Value="@(OrderSideEnum.Sell)" />
+        <MudSelectItem T="OrderSideEnum" Value="@(OrderSideEnum.Long)" />
+        <MudSelectItem T="OrderSideEnum" Value="@(OrderSideEnum.Short)" />
       </MudSelect>
       <MudPaper Class="py-6 d-flex justify-end" Elevation="0">
         <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="OnClose" Class="mr-3">Cancel</MudButton>

@@ -104,8 +104,8 @@ namespace Terminal.Pages.Shares
 
       if (account.Positions.Count == 2)
       {
-        var buy = account.Positions.First(o => o.Value.Side == OrderSideEnum.Buy);
-        var sell = account.Positions.First(o => o.Value.Side == OrderSideEnum.Sell);
+        var buy = account.Positions.First(o => o.Value.Side == OrderSideEnum.Long);
+        var sell = account.Positions.First(o => o.Value.Side == OrderSideEnum.Short);
         var gain = buy.Value.GetPointsEstimate() + sell.Value.GetPointsEstimate();
 
         switch (true)
@@ -142,7 +142,7 @@ namespace Terminal.Pages.Shares
       var orderSell = new OrderModel
       {
         Volume = 1,
-        Side = OrderSideEnum.Sell,
+        Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Market,
         Transaction = new() { Instrument = assetSell }
       };
@@ -150,7 +150,7 @@ namespace Terminal.Pages.Shares
       var orderBuy = new OrderModel
       {
         Volume = 1,
-        Side = OrderSideEnum.Buy,
+        Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
         Transaction = new() { Instrument = assetBuy }
       };

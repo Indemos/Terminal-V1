@@ -131,8 +131,8 @@ namespace Terminal.Pages.Gateways
     protected async Task OpenPositions(InstrumentModel instrument, double direction)
     {
       var adapter = View.Adapters["Prime"];
-      var side = direction > 0 ? OrderSideEnum.Buy : OrderSideEnum.Sell;
-      var stopSide = direction < 0 ? OrderSideEnum.Buy : OrderSideEnum.Sell;
+      var side = direction > 0 ? OrderSideEnum.Long : OrderSideEnum.Short;
+      var stopSide = direction < 0 ? OrderSideEnum.Long : OrderSideEnum.Short;
 
       var TP = new OrderModel
       {
@@ -173,7 +173,7 @@ namespace Terminal.Pages.Gateways
 
       foreach (var position in adapter.Account.Positions.Values.Where(o => Equals(name, o.Name)))
       {
-        var side = position.Side is OrderSideEnum.Buy ? OrderSideEnum.Sell : OrderSideEnum.Buy;
+        var side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long;
         var order = new OrderModel
         {
           Side = side,

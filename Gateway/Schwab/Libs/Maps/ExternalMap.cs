@@ -153,16 +153,16 @@ namespace Schwab.Mappers
     {
       switch (side)
       {
-        case OrderSideEnum.Buy: return "BUY"; 
-        case OrderSideEnum.Sell: return "SELL"; 
+        case OrderSideEnum.Long: return "BUY"; 
+        case OrderSideEnum.Short: return "SELL"; 
       }
 
       if (assetType is InstrumentEnum.Options)
       {
         switch (side)
         {
-          case OrderSideEnum.Buy: return "BUY_TO_OPEN"; 
-          case OrderSideEnum.Sell: return "SELL_TO_OPEN";
+          case OrderSideEnum.Long: return "BUY_TO_OPEN"; 
+          case OrderSideEnum.Short: return "SELL_TO_OPEN";
         }
       }
 

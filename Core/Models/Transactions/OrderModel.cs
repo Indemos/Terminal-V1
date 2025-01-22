@@ -114,8 +114,8 @@ namespace Terminal.Core.Models
     {
       switch (Side)
       {
-        case OrderSideEnum.Buy: return 1;
-        case OrderSideEnum.Sell: return -1;
+        case OrderSideEnum.Long: return 1;
+        case OrderSideEnum.Short: return -1;
       }
 
       return null;
@@ -147,8 +147,8 @@ namespace Terminal.Core.Models
       {
         switch (Side)
         {
-          case OrderSideEnum.Buy: return point.Ask;
-          case OrderSideEnum.Sell: return point.Bid;
+          case OrderSideEnum.Long: return point.Ask;
+          case OrderSideEnum.Short: return point.Bid;
         }
       }
 
@@ -168,8 +168,8 @@ namespace Terminal.Core.Models
       {
         switch (Side)
         {
-          case OrderSideEnum.Buy: return point.Bid;
-          case OrderSideEnum.Sell: return point.Ask;
+          case OrderSideEnum.Long: return point.Bid;
+          case OrderSideEnum.Short: return point.Ask;
         }
       }
 

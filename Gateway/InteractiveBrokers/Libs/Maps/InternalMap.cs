@@ -15,7 +15,7 @@ namespace InteractiveBrokers.Mappers
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    public static PointModel GetPrice(HistoricalTickBidAsk message)
+    public static PointModel GetPrice(HistoricalTickBidAsk message, InstrumentModel instrument)
     {
       var point = new PointModel
       {
@@ -24,7 +24,8 @@ namespace InteractiveBrokers.Mappers
         AskSize = (double)message.SizeAsk,
         BidSize = (double)message.SizeBid,
         Last = message.PriceBid,
-        Time = DateTimeOffset.FromUnixTimeSeconds(message.Time).UtcDateTime
+        Time = DateTimeOffset.FromUnixTimeSeconds(message.Time).UtcDateTime,
+        Instrument = instrument
       };
 
       return point;
@@ -101,7 +102,7 @@ namespace InteractiveBrokers.Mappers
         Transaction = action,
         Type = OrderTypeEnum.Market,
         Price = message.AverageCost / (volume * Math.Max(1, instrument.Leverage.Value)),
-        Side = message.Position > 0 ? OrderSideEnum.Buy : OrderSideEnum.Sell
+        Side = message.Position > 0 ? OrderSideEnum.Long : OrderSideEnum.Short
       };
 
       return order;
@@ -139,11 +140,11 @@ namespace InteractiveBrokers.Mappers
     {
       switch (side)
       {
-        case "BUY": return OrderSideEnum.Buy;
-        case "SELL": return OrderSideEnum.Sell;
+        case "BUY": return OrderSideEnum.Long;
+        case "SELL": return OrderSideEnum.Short;
       }
 
-      return null;
+      return OrderSideEnum.Group;
     }
 
     /// <summary>

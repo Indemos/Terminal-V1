@@ -103,7 +103,7 @@ namespace Schwab.Mappers
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    public static PointModel GetPrice(AssetMessage message)
+    public static PointModel GetPrice(AssetMessage message, InstrumentModel instrument)
     {
       var o = message.Quote;
       var point = new PointModel
@@ -114,7 +114,7 @@ namespace Schwab.Mappers
         BidSize = o.BidSize,
         Last = o.AskTime > o.BidTime ? o.AskPrice : o.BidPrice,
         Time = DateTimeOffset.FromUnixTimeMilliseconds(o.QuoteTime ?? DateTime.Now.Ticks).UtcDateTime,
-        Instrument = new InstrumentModel { Name = message.Symbol }
+        Instrument = instrument
       };
 
       return point;
@@ -195,7 +195,7 @@ namespace Schwab.Mappers
         Theta = optionMessage.Theta ?? 0
       };
 
-      var option = new DerivativeModel
+      var derivative = new DerivativeModel
       {
         Strike = optionMessage.StrikePrice,
         ExpirationDate = optionMessage.ExpirationDate,
@@ -208,18 +208,18 @@ namespace Schwab.Mappers
 
       if (optionMessage.LastTradingDay is not null)
       {
-        option.TradeDate = DateTimeOffset
+        derivative.TradeDate = DateTimeOffset
           .FromUnixTimeMilliseconds((long)optionMessage.LastTradingDay)
           .LocalDateTime;
       }
 
       optionInstrument.Point = optionPoint;
-      optionInstrument.Derivative = option;
+      optionInstrument.Derivative = derivative;
 
-      switch (optionMessage.PutCall.ToUpper())
+      switch (optionMessage?.PutCall?.ToUpper())
       {
-        case "PUT": option.Side = OptionSideEnum.Put; break;
-        case "CALL": option.Side = OptionSideEnum.Call; break;
+        case "PUT": derivative.Side = OptionSideEnum.Put; break;
+        case "CALL": derivative.Side = OptionSideEnum.Call; break;
       }
 
       return optionInstrument;
@@ -230,7 +230,7 @@ namespace Schwab.Mappers
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    public static PointModel GetBar(BarMessage message)
+    public static PointModel GetPrice(BarMessage message)
     {
       var point = new PointModel
       {
@@ -298,8 +298,8 @@ namespace Schwab.Mappers
     {
       switch (true)
       {
-        case true when message.LongQuantity > 0: return OrderSideEnum.Buy;
-        case true when message.ShortQuantity > 0: return OrderSideEnum.Sell;
+        case true when message.LongQuantity > 0: return OrderSideEnum.Long;
+        case true when message.ShortQuantity > 0: return OrderSideEnum.Short;
       }
 
       return null;
@@ -429,14 +429,66 @@ namespace Schwab.Mappers
     }
 
     /// <summary>
+    /// Get derivative model based on option name
+    /// </summary>
+    /// <param name="name"></param>
+    /// <returns></returns>
+    public static DerivativeModel GetDerivative(string name)
+    {
+      var strike = name.Substring(name.Length - 8);
+      var side = name.Substring(name.Length - 9, 1);
+      var expiration = name.Substring(name.Length - 15, 6);
+      var expirationDate = DateTime.ParseExact(expiration, "yyMMdd", null);
+      var derivative = new DerivativeModel
+      {
+        Strike = double.Parse(strike) / 1000.0,
+        ExpirationDate = expirationDate,
+        TradeDate = expirationDate
+      };
+
+      switch (side?.ToUpper())
+      {
+        case "P": derivative.Side = OptionSideEnum.Put; break;
+        case "C": derivative.Side = OptionSideEnum.Call; break;
+      }
+
+      return derivative;
+    }
+
+    /// <summary>
     /// Convert remote order side to local
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
     public static OrderSideEnum? GetOrderSide(OrderMessage message)
     {
+      static double getValue(OrderLegMessage o)
+      {
+        var units = 1.0;
+        var volume = o.Quantity ?? 1.0;
+
+        if (GetInstrumentType(o.OrderLegType) is InstrumentEnum.Options or InstrumentEnum.FutureOptions)
+        {
+          var derivative = GetDerivative(o.Instrument.Symbol);
+          var strike = 1.0 / (derivative.Strike ?? 1.0);
+          var expiration = derivative.ExpirationDate?.Ticks ?? 1.0;
+          units = 100.0 * expiration * strike;
+        }
+
+        return volume * units;
+      }
+
       if (message?.OrderLegCollection?.Count > 0)
       {
+        var ups = message?.OrderLegCollection?.Where(o => GetSubOrderSide(o.Instruction) is OrderSideEnum.Long).Sum(getValue);
+        var downs = message?.OrderLegCollection?.Where(o => GetSubOrderSide(o.Instruction) is OrderSideEnum.Short).Sum(getValue);
+
+        switch (true)
+        {
+          case true when ups > downs: return OrderSideEnum.Long;
+          case true when ups < downs: return OrderSideEnum.Short;
+        }
+
         return OrderSideEnum.Group;
       }
 
@@ -453,15 +505,17 @@ namespace Schwab.Mappers
       switch (status?.ToUpper())
       {
         case "BUY":
+        case "DEBIT":
         case "BUY_TO_OPEN":
         case "BUY_TO_CLOSE":
-        case "NET_DEBIT": return OrderSideEnum.Buy;
+        case "NET_DEBIT": return OrderSideEnum.Long;
 
         case "SELL":
+        case "CREDIT":
         case "SELL_SHORT":
         case "SELL_TO_OPEN":
         case "SELL_TO_CLOSE":
-        case "NET_CREDIT": return OrderSideEnum.Sell;
+        case "NET_CREDIT": return OrderSideEnum.Short;
       }
 
       return null;

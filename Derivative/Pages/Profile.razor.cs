@@ -139,7 +139,7 @@ namespace Derivative.Pages
     /// <returns></returns>
     protected double GetEstimate(double price, OptionInputModel inputModel)
     {
-      var direction = inputModel.Position is OrderSideEnum.Buy ? 1.0 : -1.0;
+      var direction = inputModel.Position is OrderSideEnum.Long ? 1.0 : -1.0;
 
       if (inputModel.Side is OptionSideEnum.Share)
       {
