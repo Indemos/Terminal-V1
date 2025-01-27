@@ -256,7 +256,7 @@ namespace Alpaca
         var props = new ListOrdersRequest { OrderStatusFilter = OrderStatusFilter.Open };
         var items = await _tradingClient.ListOrdersAsync(props);
 
-        response.Data = [.. items.Select(InternalMap.GetOrder)];
+        response.Data = items.Select(InternalMap.GetOrder)?.ToList() ?? [];
       }
       catch (Exception e)
       {
@@ -280,7 +280,7 @@ namespace Alpaca
       {
         var items = await _tradingClient.ListPositionsAsync();
 
-        response.Data = [.. items.Select(InternalMap.GetPosition)];
+        response.Data = items.Select(InternalMap.GetPosition)?.ToList() ?? [];
       }
       catch (Exception e)
       {
@@ -529,7 +529,7 @@ namespace Alpaca
         instrument.PointGroups.Add(point, instrument.TimeFrame);
         instrument.Point = instrument.PointGroups.Last();
 
-        PointStream(new MessageModel<PointModel> { Next = instrument.Point });
+        DataStream(new MessageModel<PointModel> { Next = instrument.Point });
       });
     }
 

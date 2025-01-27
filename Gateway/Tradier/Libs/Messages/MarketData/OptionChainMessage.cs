@@ -89,7 +89,7 @@ namespace Tradier.Messages.MarketData
 
     [JsonPropertyName("trade_date")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public DateTime? TradeDate { get; set; }
+    public long? TradeDate { get; set; }
 
     [JsonPropertyName("prevclose")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -112,7 +112,7 @@ namespace Tradier.Messages.MarketData
 
     [JsonPropertyName("bid_date")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public DateTime? BidDate { get; set; }
+    public long? BidDate { get; set; }
 
     [JsonPropertyName("asksize")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -123,7 +123,7 @@ namespace Tradier.Messages.MarketData
 
     [JsonPropertyName("ask_date")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public DateTime? AskDate { get; set; }
+    public long? AskDate { get; set; }
 
     [JsonPropertyName("open_interest")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

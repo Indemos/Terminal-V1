@@ -15,6 +15,26 @@ namespace Tradier.Mappers
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
+    public static PointModel GetPrice(Messages.Stream.QuoteMessage message)
+    {
+      var point = new PointModel
+      {
+        Ask = message.Ask,
+        Bid = message.Bid,
+        Last = message.Bid,
+        AskSize = message.AskSize,
+        BidSize = message.BidSize,
+        Time = DateTimeOffset.FromUnixTimeMilliseconds(message?.BidDate ?? 0).UtcDateTime
+      };
+
+      return point;
+    }
+
+    /// <summary>
+    /// Get point
+    /// </summary>
+    /// <param name="message"></param>
+    /// <returns></returns>
     public static PointModel GetPrice(QuoteMessage message)
     {
       var point = new PointModel
@@ -22,10 +42,10 @@ namespace Tradier.Mappers
         Ask = message.Ask,
         Bid = message.Bid,
         Last = message.Last,
-        AskSize = message.Asksize,
-        BidSize = message.Bidsize,
+        AskSize = message.AskSize,
+        BidSize = message.BidSize,
         Volume = message.Volume,
-        Time = DateTimeOffset.FromUnixTimeSeconds(message?.TradeDate?.Ticks ?? 0).UtcDateTime
+        Time = DateTimeOffset.FromUnixTimeMilliseconds(message?.TradeDate ?? 0).UtcDateTime
       };
 
       point.Bar ??= new BarModel();
@@ -87,14 +107,14 @@ namespace Tradier.Mappers
       var basis = new InstrumentModel
       {
         Type = GetInstrumentType(message.Class),
-        Name = string.Join(" / ", subOrders.Select(o => o.Symbol).Distinct())
+        Name = message.Symbol
       };
 
       var instrument = new InstrumentModel
       {
         Basis = basis,
         Type = GetInstrumentType(message.Class),
-        Name = string.Join(" / ", subOrders.Select(o => o.OptionSymbol ?? o.Symbol))
+        Name = string.Join(" / ", subOrders.Select(o => o.OptionSymbol ?? o.Symbol).Distinct())
       };
 
       var action = new TransactionModel

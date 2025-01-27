@@ -104,7 +104,7 @@ namespace Terminal.Pages
         using var archive = ZipFile.Open(source, ZipArchiveMode.Create);
         using (var entry = archive.CreateEntry($"{DateTime.UtcNow.Ticks}").Open())
         {
-          var bytes = Encoding.ASCII.GetBytes(content);
+          var bytes = Encoding.UTF8.GetBytes(content);
           entry.Write(bytes);
         }
       }

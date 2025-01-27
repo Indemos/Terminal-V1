@@ -19,7 +19,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Point stream
     /// </summary>
-    Action<MessageModel<PointModel>> PointStream { get; set; }
+    Action<MessageModel<PointModel>> DataStream { get; set; }
 
     /// <summary>
     /// Order stream
@@ -123,7 +123,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Point stream
     /// </summary>
-    public virtual Action<MessageModel<PointModel>> PointStream { get; set; }
+    public virtual Action<MessageModel<PointModel>> DataStream { get; set; }
 
     /// <summary>
     /// Order stream
@@ -135,7 +135,7 @@ namespace Terminal.Core.Domains
     /// </summary>
     public Gateway()
     {
-      PointStream = o => { };
+      DataStream = o => { };
       OrderStream = o => { };
     }
 

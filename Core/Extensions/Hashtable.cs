@@ -6,11 +6,12 @@ namespace Terminal.Core.Extensions
 {
   public static class HashtableExtensions
   {
-    public static T Get<T>(this Hashtable input, string index)
-    {
-      return (T)(index is not null && input.ContainsKey(index) ? input[index] : default);
-    }
-
+    /// <summary>
+    /// Merge maps
+    /// </summary>
+    /// <param name="source"></param>
+    /// <param name="maps"></param>
+    /// <returns></returns>
     public static NameValueCollection Merge(this Hashtable source, params Hashtable[] maps)
     {
       var response = HttpUtility.ParseQueryString(string.Empty);
@@ -26,6 +27,23 @@ namespace Terminal.Core.Extensions
         {
           response[$"{o.Key}"] = $"{o.Value}";
         }
+      }
+
+      return response;
+    }
+
+    /// <summary>
+    /// Convert to query
+    /// </summary>
+    /// <param name="source"></param>
+    /// <returns></returns>
+    public static NameValueCollection Compact(this Hashtable source)
+    {
+      var response = HttpUtility.ParseQueryString(string.Empty);
+
+      foreach (DictionaryEntry o in source ?? [])
+      {
+        response[$"{o.Key}"] = $"{o.Value}";
       }
 
       return response;

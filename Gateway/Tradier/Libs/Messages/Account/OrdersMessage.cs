@@ -3,6 +3,7 @@ namespace Tradier.Messages.Account
   using System;
   using System.Collections.Generic;
   using System.Text.Json.Serialization;
+  using Tradier.Converters;
 
   public class OrdersCoreMessage
   {
@@ -15,6 +16,7 @@ namespace Tradier.Messages.Account
   {
     [JsonPropertyName("order")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonConverter(typeof(SingularConverter<OrderMessage>))]
     public List<OrderMessage> Items { get; set; }
   }
 

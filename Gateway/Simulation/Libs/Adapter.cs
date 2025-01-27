@@ -101,7 +101,7 @@ namespace Simulation
 
       await Unsubscribe(instrument);
 
-      PointStream += OnPoint;
+      DataStream += OnPoint;
 
       var span = TimeSpan.FromMicroseconds(Speed);
       var points = new Dictionary<string, PointModel>();
@@ -130,7 +130,7 @@ namespace Simulation
           instrument.Points.Add(point);
           instrument.PointGroups.Add(point, instrument.TimeFrame);
 
-          PointStream(new MessageModel<PointModel>
+          DataStream(new MessageModel<PointModel>
           {
             Next = instrument.PointGroups.Last()
           });
@@ -168,7 +168,7 @@ namespace Simulation
     {
       var response = new ResponseModel<StatusEnum>();
 
-      PointStream -= OnPoint;
+      DataStream -= OnPoint;
 
       if (_subscriptions.ContainsKey(instrument.Name))
       {

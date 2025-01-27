@@ -493,10 +493,11 @@ namespace Schwab
 
         var orders = await Send<OrderMessage[]>($"{DataUri}/trader/v1/accounts/{_accountCode}/orders?{props}");
 
-        response.Data = [.. orders
+        response.Data = orders
           .Data
-          .Where(o => o.CloseTime is null)
-          .Select(InternalMap.GetOrder)];
+          ?.Where(o => o.CloseTime is null)
+          ?.Select(InternalMap.GetOrder)
+          ?.ToList() ?? [];
       }
       catch (Exception e)
       {
@@ -521,11 +522,12 @@ namespace Schwab
         var props = new Hashtable { ["fields"] = "positions" }.Merge(criteria);
         var account = await Send<AccountsMessage>($"{DataUri}/trader/v1/accounts/{_accountCode}?{props}");
 
-        response.Data = [.. account
+        response.Data = account
           .Data
-          .SecuritiesAccount
-          .Positions
-          .Select(InternalMap.GetPosition)];
+          ?.SecuritiesAccount
+          ?.Positions
+          ?.Select(InternalMap.GetPosition)
+          ?.ToList() ?? [];
       }
       catch (Exception e)
       {
@@ -568,7 +570,7 @@ namespace Schwab
     protected virtual Task SendStream(ClientWebSocket streamer, object data, CancellationTokenSource cancellation = null)
     {
       var content = JsonSerializer.Serialize(data, _sender.Options);
-      var message = Encoding.ASCII.GetBytes(content);
+      var message = Encoding.UTF8.GetBytes(content);
 
       return streamer.SendAsync(
         message,
@@ -589,7 +591,7 @@ namespace Schwab
       var cancellation = source?.Token ?? CancellationToken.None;
       var data = new byte[short.MaxValue];
       var response = await streamer.ReceiveAsync(data, cancellation);
-      var message = Encoding.ASCII.GetString(data, 0, response.Count);
+      var message = Encoding.UTF8.GetString(data, 0, response.Count);
 
       return JsonSerializer.Deserialize<T>(message, _sender.Options);
     }
@@ -699,7 +701,7 @@ namespace Schwab
           instrument.PointGroups.Add(point, instrument.TimeFrame);
           instrument.Point = instrument.PointGroups.Last();
 
-          PointStream(new MessageModel<PointModel> { Next = instrument.Point });
+          DataStream(new MessageModel<PointModel> { Next = instrument.Point });
         }
       }
     }
@@ -821,8 +823,6 @@ namespace Schwab
       {
         response.Errors.Add(new ErrorModel { ErrorMessage = $"{exResponse.Message.StatusCode}" });
       }
-
-      await GetAccount([]);
 
       return response;
     }

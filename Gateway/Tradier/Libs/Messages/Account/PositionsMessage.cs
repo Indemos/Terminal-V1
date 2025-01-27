@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using Tradier.Converters;
 
 namespace Tradier.Messages.Account
 {
@@ -14,7 +15,7 @@ namespace Tradier.Messages.Account
   public class PositionsMessage
   {
     [JsonPropertyName("position")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonConverter(typeof(SingularConverter<PositionMessage>))]
     public List<PositionMessage> Items { get; set; }
   }
 

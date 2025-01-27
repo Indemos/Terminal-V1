@@ -1,4 +1,4 @@
-namespace Tradier.Messages
+namespace Tradier.Messages.Stream
 {
   using System.Text.Json.Serialization;
 
@@ -27,5 +27,9 @@ namespace Tradier.Messages
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [JsonPropertyName("prevClose")]
     public string PreviousClose { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonPropertyName("close")]
+    public string Close { get; set; }
   }
 }

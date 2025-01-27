@@ -1,6 +1,6 @@
 using System.Net.Http;
 using System.Threading.Tasks;
-using Tradier.Messages;
+using Tradier.Messages.Stream;
 
 namespace Tradier
 {
@@ -8,15 +8,15 @@ namespace Tradier
   {
     public async Task<SessionMessage> GetMarketSession()
     {
-      var uri = $"{SessionUri}/markets/events/session";
-      var response = await Send<SessionMessage>($"{SessionUri}/markets/events/session", HttpMethod.Post, null, SessionToken);
+      var source = $"{SessionUri}/markets/events/session";
+      var response = await Send<SessionMessage>(source, HttpMethod.Post, null, SessionToken);
       return response.Data;
     }
 
     public async Task<SessionMessage> GetAccountSession()
     {
-      var uri = $"{SessionUri}/accounts/events/session";
-      var response = await Send<SessionMessage>($"{SessionUri}/accounts/events/session", HttpMethod.Post, null, SessionToken);
+      var source = $"{SessionUri}/accounts/events/session";
+      var response = await Send<SessionMessage>(source, HttpMethod.Post, null, SessionToken);
       return response.Data;
     }
   }

@@ -84,7 +84,7 @@ namespace Terminal.Pages.Shares
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.PointStream += async message => await OnData(message.Next));
+        .ForEach(adapter => adapter.DataStream += async message => await OnData(message.Next));
     }
 
     protected async Task OnData(PointModel point)

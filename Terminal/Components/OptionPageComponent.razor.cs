@@ -46,7 +46,7 @@ namespace Terminal.Components
       View.OnPreConnect = () =>
       {
         View.Adapters["Sim"] = CreateSimAccount();
-        View.Adapters["Sim"].PointStream += o => action(o.Next);
+        View.Adapters["Sim"].DataStream += o => action(o.Next);
       };
 
       View.OnPostConnect = () =>

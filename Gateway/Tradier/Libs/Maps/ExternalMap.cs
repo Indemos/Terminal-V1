@@ -1,4 +1,5 @@
 using Terminal.Core.Enums;
+using Terminal.Core.Models;
 
 namespace Tradier.Mappers
 {
@@ -7,14 +8,16 @@ namespace Tradier.Mappers
     /// <summary>
     /// Get external instrument type
     /// </summary>
-    /// <param name="side"></param>
+    /// <param name="order"></param>
     /// <returns></returns>
-    public static string GetSide(OrderSideEnum? side)
+    public static string GetSide(OrderModel order)
     {
-      switch (side)
+      switch (order.Side)
       {
         case OrderSideEnum.Long: return "buy";
         case OrderSideEnum.Short: return "sell";
+        case OrderSideEnum.ShortOpen: return "sell_short";
+        case OrderSideEnum.ShortCover: return "buy_to_cover";
       }
 
       return null;

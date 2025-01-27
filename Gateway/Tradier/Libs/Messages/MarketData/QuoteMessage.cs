@@ -82,11 +82,11 @@ namespace Tradier.Messages.MarketData
 
     [JsonPropertyName("trade_date")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public DateTime? TradeDate { get; set; }
+    public long? TradeDate { get; set; }
 
     [JsonPropertyName("prevclose")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? Prevclose { get; set; }
+    public double? PrevClose { get; set; }
 
     [JsonPropertyName("week_52_high")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -99,25 +99,25 @@ namespace Tradier.Messages.MarketData
 
     [JsonPropertyName("bidsize")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? Bidsize { get; set; }
+    public int? BidSize { get; set; }
 
     [JsonPropertyName("bidexch")]
     public string Bidexch { get; set; }
 
     [JsonPropertyName("bid_date")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public DateTime? BidDate { get; set; }
+    public long? BidDate { get; set; }
 
     [JsonPropertyName("asksize")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? Asksize { get; set; }
+    public int? AskSize { get; set; }
 
     [JsonPropertyName("askexch")]
-    public string Askexch { get; set; }
+    public string AskExchange { get; set; }
 
     [JsonPropertyName("ask_date")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public DateTime? AskDate { get; set; }
+    public long? AskDate { get; set; }
 
     [JsonPropertyName("root_symbols")]
     public string RootSymbols { get; set; }
@@ -138,7 +138,7 @@ namespace Tradier.Messages.MarketData
     public int? ContractSize { get; set; }
 
     [JsonPropertyName("expiration_date")]
-    public string ExpirationDate { get; set; }
+    public DateTime? ExpirationDate { get; set; }
 
     [JsonPropertyName("expiration_type")]
     public string ExpirationType { get; set; }

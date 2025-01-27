@@ -495,7 +495,7 @@ namespace InteractiveBrokers
         _client.OpenOrder -= subscribe;
         _client.OpenOrderEnd -= unsubscribe;
 
-        response.Data = [.. orders.Values];
+        response.Data = orders?.Values?.ToList() ?? [];
         source.TrySetResult();
       }
 
@@ -524,6 +524,7 @@ namespace InteractiveBrokers
     public override async Task<ResponseModel<IList<OrderModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria)
     {
       var id = _counter++;
+      var positions = new ConcurrentDictionary<string, OrderModel>();
       var response = new ResponseModel<IList<OrderModel>> { Data = [] };
       var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -531,7 +532,7 @@ namespace InteractiveBrokers
       {
         if (Equals(id, message.ReqId) && Equals(message.Account, Account.Descriptor))
         {
-          response.Data.Add(InternalMap.GetPosition(message));
+          positions[$"{message.Contract.LocalSymbol}"] = InternalMap.GetPosition(message);
         }
       }
 
@@ -543,6 +544,7 @@ namespace InteractiveBrokers
           _client.PositionMultiEnd -= unsubscribe;
           _client.ClientSocket.cancelPositionsMulti(id);
 
+          response.Data = positions?.Values?.ToList() ?? [];
           source.TrySetResult();
         }
       }
@@ -633,7 +635,7 @@ namespace InteractiveBrokers
           instrument.PointGroups.Add(point, instrument.TimeFrame);
           instrument.Point = instrument.PointGroups.Last();
 
-          PointStream(new MessageModel<PointModel> { Next = instrument.Point });
+          DataStream(new MessageModel<PointModel> { Next = instrument.Point });
         }
       }
 

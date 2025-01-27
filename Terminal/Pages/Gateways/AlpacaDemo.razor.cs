@@ -79,7 +79,7 @@ namespace Terminal.Pages.Gateways
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.PointStream += async message =>
+        .ForEach(adapter => adapter.DataStream += async message =>
         {
           if (Equals(message.Next.Instrument.Name, Instrument.Name))
           {
@@ -90,7 +90,7 @@ namespace Terminal.Pages.Gateways
 
     protected async Task OnData(PointModel point)
     {
-      var name = Instrument.Name.Replace("/", string.Empty);
+      var name = Instrument.Name;
       var account = View.Adapters["Prime"].Account;
       var instrument = account.Instruments[Instrument.Name];
       var performance = Performance.Calculate([account]);

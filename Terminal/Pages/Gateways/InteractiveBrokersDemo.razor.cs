@@ -78,7 +78,7 @@ namespace Terminal.Pages.Gateways
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.PointStream += async message =>
+        .ForEach(adapter => adapter.DataStream += async message =>
         {
           if (Equals(message.Next.Instrument.Name, Instrument.Name))
           {

@@ -21,6 +21,8 @@ using Tradier.Messages.MarketData;
 using Tradier.Mappers;
 using Tradier.Messages;
 using Dis = Distribution.Stream.Models;
+using Tradier.Messages.Stream;
+using Tradier.Messages.Trading;
 
 namespace Tradier
 {
@@ -113,13 +115,15 @@ namespace Tradier
         _accountSession = (await GetAccountSession()).Stream?.Session;
 
         await GetAccount([]);
-        await GetConnection("/v1/markets/events", dataStreamer, scheduler, message =>
+        await GetConnection("/markets/events", dataStreamer, scheduler, message =>
         {
-          switch ($"{message["type"]}")
+          var messageType = $"{message["type"]}";
+
+          switch (messageType)
           {
             case "quote":
 
-              var quoteMessage = message.Deserialize<QuoteMessage>();
+              var quoteMessage = message.Deserialize<Messages.Stream.QuoteMessage>(_sender.Options);
               var point = InternalMap.GetPrice(quoteMessage);
               var instrument = Account.Instruments[quoteMessage.Symbol];
 
@@ -127,6 +131,9 @@ namespace Tradier
 
               instrument.Points.Add(point);
               instrument.PointGroups.Add(point, instrument.TimeFrame);
+              instrument.Point = instrument.PointGroups.Last();
+
+              DataStream(new MessageModel<PointModel> { Next = instrument.Point });
 
               break;
 
@@ -137,9 +144,9 @@ namespace Tradier
           }
         });
 
-        await GetConnection("/v1/accounts/events", accountStreamer, scheduler, message =>
+        await GetConnection("/accounts/events", accountStreamer, scheduler, message =>
         {
-          var order = InternalMap.GetStreamOrder(message.Deserialize<OrderMessage>());
+          var order = InternalMap.GetStreamOrder(message.Deserialize<OrderMessage>(_sender.Options));
           var container = new MessageModel<OrderModel> { Next = order };
 
           OrderStream(container);
@@ -204,13 +211,10 @@ namespace Tradier
         {
           Symbols = [instrument.Name],
           Filter = ["trade", "quote", "summary", "timesale", "tradex"],
-          LineBreak = true,
-          ValidOnly = false,
-          AdvancedDetails = true,
           Session = _dataSession
         };
 
-        var accountMessage = new Messages.AccountMessage
+        var accountMessage = new Messages.Stream.AccountMessage
         {
           Events = ["order"],
           Session = _accountSession
@@ -361,7 +365,7 @@ namespace Tradier
 
       try
       {
-        response.Data = [.. (await GetPositions(Account.Descriptor))?.Items?.Select(InternalMap.GetPosition)];
+        response.Data = (await GetPositions(Account.Descriptor))?.Select(InternalMap.GetPosition)?.ToList() ?? [];
       }
       catch (Exception e)
       {
@@ -383,7 +387,7 @@ namespace Tradier
 
       try
       {
-        response.Data = [.. (await GetOrders(Account.Descriptor))?.Items?.Select(InternalMap.GetOrder)];
+        response.Data = (await GetOrders(Account.Descriptor))?.Select(InternalMap.GetOrder)?.ToList() ?? [];
 
       }
       catch (Exception e)
@@ -407,10 +411,7 @@ namespace Tradier
       {
         try
         {
-          if (Equals((await SendGroupOrder(order)).Status, "ok"))
-          {
-            response.Data.Add(order);
-          }
+          response.Data.Add(await CreateOrder(order));
         }
         catch (Exception e)
         {
@@ -490,6 +491,45 @@ namespace Tradier
     }
 
     /// <summary>
+    /// Create order
+    /// </summary>
+    /// <param name="order"></param>
+    /// <param name="preview"></param>
+    /// <returns></returns>
+    protected virtual async Task<OrderModel> CreateOrder(OrderModel order, bool preview = false)
+    {
+      Account.Orders[order.Id] = order;
+
+      var response = null as OrderResponseMessage;
+
+      if (order.Orders.IsEmpty())
+      {
+        switch (order.Transaction.Instrument.Type)
+        {
+          case InstrumentEnum.Shares: response = await SendEquityOrder(order, preview); break;
+          case InstrumentEnum.Options: response = await SendOptionOrder(order, preview); break;
+        }
+      }
+      else
+      {
+        var isBrace = order.Orders.Any(o => o.Instruction is InstructionEnum.Brace);
+        var isCombo = order.Orders.Append(order).Any(o => o.Transaction.Instrument.Type is InstrumentEnum.Shares);
+
+        switch (true)
+        {
+          case true when isBrace: response = await SendBraceOrder(order, preview); break;
+          case true when isCombo: response = await SendComboOrder(order, preview); break;
+          case true when isCombo is false: response = await SendGroupOrder(order, preview); break;
+        }
+      }
+
+      order.Transaction.Id = $"{response?.Id}";
+      order.Transaction.Status = Equals(response.Status, "ok") ? OrderStatusEnum.Filled : order.Transaction.Status;
+
+      return order;
+    }
+
+    /// <summary>
     /// Send data to web socket stream
     /// </summary>
     /// <param name="streamer"></param>
@@ -499,7 +539,7 @@ namespace Tradier
     protected virtual Task SendStream(ClientWebSocket streamer, object data, CancellationTokenSource cancellation = null)
     {
       var content = JsonSerializer.Serialize(data, _sender.Options);
-      var message = Encoding.ASCII.GetBytes(content);
+      var message = Encoding.UTF8.GetBytes(content);
 
       return streamer.SendAsync(
         message,
@@ -534,7 +574,6 @@ namespace Tradier
             var content = $"{Encoding.Default.GetString(data).Trim(['\0', '[', ']'])}";
 
             action(JsonNode.Parse(content));
-
           }
           catch (Exception e)
           {

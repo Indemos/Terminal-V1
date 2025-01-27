@@ -151,19 +151,21 @@ namespace Schwab.Mappers
     /// <returns></returns>
     public static string GetSide(InstrumentEnum? assetType, OrderSideEnum? side)
     {
-      switch (side)
-      {
-        case OrderSideEnum.Long: return "BUY"; 
-        case OrderSideEnum.Short: return "SELL"; 
-      }
-
       if (assetType is InstrumentEnum.Options)
       {
         switch (side)
         {
-          case OrderSideEnum.Long: return "BUY_TO_OPEN"; 
+          case OrderSideEnum.Long: return "BUY_TO_OPEN";
           case OrderSideEnum.Short: return "SELL_TO_OPEN";
         }
+      }
+
+      switch (side)
+      {
+        case OrderSideEnum.Long: return "BUY";
+        case OrderSideEnum.Short: return "SELL";
+        case OrderSideEnum.ShortOpen: return "SELL_SHORT";
+        case OrderSideEnum.ShortCover: return "BUY_TO_COVER";
       }
 
       return null;

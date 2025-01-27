@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -15,8 +16,8 @@ namespace Tradier
     /// </summary>
     public async Task<WatchlistsMessage> GetWatchlists()
     {
-      var uri = $"{DataUri}/watchlists";
-      var response = await Send<WatchlistsCoreMessage>(uri);
+      var source = $"{DataUri}/watchlists";
+      var response = await Send<WatchlistsCoreMessage>(source);
       return response.Data?.Watchlists;
     }
 
@@ -25,8 +26,8 @@ namespace Tradier
     /// </summary>
     public async Task<WatchlistMessage> GetWatchlist(string watchlistId)
     {
-      var uri = $"{DataUri}/watchlists/{watchlistId}";
-      var response = await Send<WatchlistCoreMessage>(uri);
+      var source = $"{DataUri}/watchlists/{watchlistId}";
+      var response = await Send<WatchlistCoreMessage>(source);
       return response.Data?.Watchlist;
     }
 
@@ -35,15 +36,14 @@ namespace Tradier
     /// </summary>
     public async Task<WatchlistMessage> CreateWatchlist(string name, List<string> symbols)
     {
-      var strSymbols = string.Join(",", symbols);
-      var data = new Dictionary<string, string>
+      var data = new Hashtable
       {
         { "name", name },
-        { "symbols", strSymbols },
+        { "symbols", string.Join(",", symbols) },
       };
 
-      var uri = $"{DataUri}/watchlists";
-      var response = await Send<WatchlistCoreMessage>(uri, HttpMethod.Post, data);
+      var source = $"{DataUri}/watchlists";
+      var response = await Send<WatchlistCoreMessage>(source, HttpMethod.Post, data);
       return response.Data?.Watchlist;
     }
 
@@ -52,15 +52,15 @@ namespace Tradier
     /// </summary>
     public async Task<WatchlistMessage> UpdateWatchlist(string watchlistId, string name, List<string> symbols = null)
     {
-      var strSymbols = string.Join(",", symbols);
-      var data = new Dictionary<string, string>
+      var data = new Hashtable
       {
         { "name", name },
-        { "symbols", strSymbols },
+        { "symbols", string.Join(",", symbols) },
       };
 
-      var uri = $"{DataUri}/watchlists/{watchlistId}";
-      var response = await Send<WatchlistCoreMessage>(uri, HttpMethod.Put, data);
+      var source = $"{DataUri}/watchlists/{watchlistId}";
+      var response = await Send<WatchlistCoreMessage>(source, HttpMethod.Put, data);
+
       return response.Data?.Watchlist;
     }
 
@@ -69,8 +69,9 @@ namespace Tradier
     /// </summary>
     public async Task<WatchlistsMessage> DeleteWatchlist(string watchlistId)
     {
-      var uri = $"watchlists/{watchlistId}";
-      var response = await Send<WatchlistsCoreMessage>(uri, HttpMethod.Delete);
+      var source = $"watchlists/{watchlistId}";
+      var response = await Send<WatchlistsCoreMessage>(source, HttpMethod.Delete);
+
       return response.Data?.Watchlists;
     }
 
@@ -79,14 +80,14 @@ namespace Tradier
     /// </summary>
     public async Task<WatchlistMessage> AddSymbolsToWatchlist(string watchlistId, List<string> symbols)
     {
-      var strSymbols = string.Join(",", symbols);
-      var data = new Dictionary<string, string>
+      var data = new Hashtable
       {
-        { "symbols", strSymbols },
+        { "symbols", string.Join(",", symbols) },
       };
 
-      var uri = $"{DataUri}/watchlists/{watchlistId}/symbols";
-      var response = await Send<WatchlistCoreMessage>(uri, HttpMethod.Post, data);
+      var source = $"{DataUri}/watchlists/{watchlistId}/symbols";
+      var response = await Send<WatchlistCoreMessage>(source, HttpMethod.Post, data);
+
       return response.Data?.Watchlist;
     }
 
@@ -95,8 +96,8 @@ namespace Tradier
     /// </summary>
     public async Task<WatchlistMessage> RemoveSymbolFromWatchlist(string watchlistId, string symbol)
     {
-      var uri = $"{DataUri}/watchlists/{watchlistId}/symbols/{symbol}";
-      var response = await Send<WatchlistCoreMessage>(uri, HttpMethod.Delete);
+      var source = $"{DataUri}/watchlists/{watchlistId}/symbols/{symbol}";
+      var response = await Send<WatchlistCoreMessage>(source, HttpMethod.Delete);
       return response.Data?.Watchlist;
     }
   }

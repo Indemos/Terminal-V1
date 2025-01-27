@@ -1,4 +1,4 @@
-namespace Tradier.Messages
+namespace Tradier.Messages.Stream
 {
   using System.Text.Json.Serialization;
 

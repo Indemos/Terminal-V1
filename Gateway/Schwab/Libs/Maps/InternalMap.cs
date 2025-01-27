@@ -315,13 +315,13 @@ namespace Schwab.Mappers
       var subOrders = message?.OrderLegCollection ?? [];
       var basis = new InstrumentModel
       {
-        Name = string.Join(" / ", subOrders.Select(o => o?.Instrument?.Symbol).Distinct())
+        Name = string.Join(" / ", subOrders.Select(o => o?.Instrument?.UnderlyingSymbol).Distinct())
       };
 
       var instrument = new InstrumentModel
       {
         Basis = basis,
-        Name = string.Join(" / ", subOrders.Select(o => o?.Instrument?.Symbol))
+        Name = string.Join(" / ", subOrders.Select(o => o?.Instrument?.Symbol).Distinct())
       };
 
       var action = new TransactionModel
@@ -330,7 +330,7 @@ namespace Schwab.Mappers
         Instrument = instrument,
         Volume = GetValue(message.FilledQuantity, message.Quantity),
         Time = message.EnteredTime,
-        Status = GetStatus(message)
+        Status = GetStatus(message.Status)
       };
 
       var order = new OrderModel
@@ -402,9 +402,9 @@ namespace Schwab.Mappers
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    public static OrderStatusEnum? GetStatus(OrderMessage message)
+    public static OrderStatusEnum? GetStatus(string message)
     {
-      switch (message.Status.ToUpper())
+      switch (message.ToUpper())
       {
         case "FILLED":
         case "REPLACED": return OrderStatusEnum.Filled;
