@@ -1,5 +1,6 @@
 using Alpaca.Markets;
 using System;
+using System.Text.RegularExpressions;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
@@ -195,7 +196,7 @@ namespace Alpaca.Mappers
     /// </summary>
     /// <param name="side"></param>
     /// <returns></returns>
-    public static OrderSideEnum? GetOrderSide(OrderSide side)
+    public static OrderSideEnum? GetOrderSide(OrderSide? side)
     {
       switch (side)
       {
@@ -263,7 +264,7 @@ namespace Alpaca.Mappers
     /// </summary>
     /// <param name="assetType"></param>
     /// <returns></returns>
-    public static InstrumentEnum? GetInstrumentType(AssetClass assetType)
+    public static InstrumentEnum? GetInstrumentType(AssetClass? assetType)
     {
       switch (assetType)
       {
@@ -282,18 +283,23 @@ namespace Alpaca.Mappers
     /// <returns></returns>
     public static DerivativeModel GetDerivative(string name)
     {
-      var strike = name.Substring(name.Length - 8);
-      var side = name.Substring(name.Length - 9, 1);
-      var expiration = name.Substring(name.Length - 15, 6);
-      var expirationDate = DateTime.ParseExact(expiration, "yyMMdd", null);
+      var data = Regex.Match(name, @"^(\w{1,5})(\d{6})([CP])(\d{8})$");
+
+      if (data.Success is false)
+      {
+        return null;
+      }
+
+      var strike = double.Parse(data.Groups[4].Value) / 1000.0;
+      var expiration = DateTime.ParseExact(data.Groups[2].Value, "yyMMdd", null);
       var derivative = new DerivativeModel
       {
-        Strike = int.Parse(strike) / 1000,
-        ExpirationDate = expirationDate,
-        TradeDate = expirationDate
+        Strike = strike,
+        ExpirationDate = expiration,
+        TradeDate = expiration
       };
 
-      switch (side?.ToUpper())
+      switch (data.Groups[3].Value.ToUpper())
       {
         case "P": derivative.Side = OptionSideEnum.Put; break;
         case "C": derivative.Side = OptionSideEnum.Call; break;

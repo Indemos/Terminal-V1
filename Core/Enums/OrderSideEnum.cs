@@ -5,8 +5,6 @@ namespace Terminal.Core.Enums
     None,
     Long,
     Short,
-    Group,
-    ShortOpen,
-    ShortCover
+    Group
   }
 }

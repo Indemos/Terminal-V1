@@ -49,6 +49,10 @@ namespace Tradier.Messages.Account
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? Price { get; set; }
 
+    [JsonPropertyName("stop_price")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? StopPrice { get; set; }
+
     [JsonPropertyName("avg_fill_price")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? AvgFillPrice { get; set; }
@@ -92,77 +96,6 @@ namespace Tradier.Messages.Account
 
     [JsonPropertyName("leg")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public LegMessage[] Leg { get; set; }
-  }
-
-  public class LegMessage
-  {
-    [JsonPropertyName("id")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public int? Id { get; set; }
-
-    [JsonPropertyName("type")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string Type { get; set; }
-
-    [JsonPropertyName("symbol")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string Symbol { get; set; }
-
-    [JsonPropertyName("side")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string Side { get; set; }
-
-    [JsonPropertyName("quantity")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? Quantity { get; set; }
-
-    [JsonPropertyName("status")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string Status { get; set; }
-
-    [JsonPropertyName("duration")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string Duration { get; set; }
-
-    [JsonPropertyName("price")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? Price { get; set; }
-
-    [JsonPropertyName("avg_fill_price")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? AvgFillPrice { get; set; }
-
-    [JsonPropertyName("exec_quantity")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? ExecQuantity { get; set; }
-
-    [JsonPropertyName("last_fill_price")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? LastFillPrice { get; set; }
-
-    [JsonPropertyName("last_fill_quantity")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? LastFillQuantity { get; set; }
-
-    [JsonPropertyName("remaining_quantity")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public double? RemainingQuantity { get; set; }
-
-    [JsonPropertyName("create_date")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public DateTime? CreateDate { get; set; }
-
-    [JsonPropertyName("transaction_date")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public DateTime? TransactionDate { get; set; }
-
-    [JsonPropertyName("_class")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string Class { get; set; }
-
-    [JsonPropertyName("option_symbol")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string OptionSymbol { get; set; }
+    public OrderMessage[] Orders { get; set; }
   }
 }

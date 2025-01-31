@@ -4,12 +4,13 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
+    <CETCompat>false</CETCompat>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Canvas.Views.Web" Version="5.6.2" />
+    <PackageReference Include="Canvas.Views.Web" Version="5.6.3" />
     <PackageReference Include="Estimator" Version="1.0.6" />
-    <PackageReference Include="MudBlazor" Version="8.0.0" />
+    <PackageReference Include="MudBlazor" Version="8.1.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
   </ItemGroup>
 

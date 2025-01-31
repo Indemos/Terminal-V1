@@ -2,6 +2,7 @@ using Schwab.Messages;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
@@ -199,7 +200,7 @@ namespace Schwab.Mappers
       {
         Strike = optionMessage.StrikePrice,
         ExpirationDate = optionMessage.ExpirationDate,
-        ExpirationType = GetEnum<ExpirationTypeEnum>(optionMessage.ExpirationType),
+        ExpirationType = Enum.TryParse(optionMessage.ExpirationType, true, out ExpirationTypeEnum o) ? o : null,
         OpenInterest = optionMessage.OpenInterest ?? 0,
         IntrinsicValue = optionMessage.IntrinsicValue ?? 0,
         Sigma = optionMessage.Volatility ?? 0,
@@ -328,7 +329,7 @@ namespace Schwab.Mappers
       {
         Id = message.OrderId,
         Instrument = instrument,
-        Volume = GetValue(message.FilledQuantity, message.Quantity),
+        Volume = Math.Max(message.FilledQuantity ?? 0, message.Quantity ?? 0),
         Time = message.EnteredTime,
         Status = GetStatus(message.Status)
       };
@@ -339,7 +340,7 @@ namespace Schwab.Mappers
         Type = OrderTypeEnum.Market,
         Side = GetOrderSide(message),
         TimeSpan = GetTimeSpan(message),
-        Volume = GetValue(message.Quantity, message.FilledQuantity)
+        Volume = Math.Max(message.Quantity ?? 0, message.FilledQuantity ?? 0)
       };
 
       switch (message.OrderType.ToUpper())
@@ -350,6 +351,8 @@ namespace Schwab.Mappers
           break;
 
         case "LIMIT":
+        case "NET_DEBIT":
+        case "NET_CREDIT":
           order.Type = OrderTypeEnum.Limit;
           order.Price = message.Price;
           break;
@@ -358,12 +361,6 @@ namespace Schwab.Mappers
           order.Type = OrderTypeEnum.StopLimit;
           order.Price = message.Price;
           order.ActivationPrice = message.StopPrice;
-          break;
-
-        case "NET_DEBIT":
-        case "NET_CREDIT":
-          order.Type = OrderTypeEnum.Limit;
-          order.Price = message.Price;
           break;
       }
 
@@ -435,18 +432,23 @@ namespace Schwab.Mappers
     /// <returns></returns>
     public static DerivativeModel GetDerivative(string name)
     {
-      var strike = name.Substring(name.Length - 8);
-      var side = name.Substring(name.Length - 9, 1);
-      var expiration = name.Substring(name.Length - 15, 6);
-      var expirationDate = DateTime.ParseExact(expiration, "yyMMdd", null);
+      var data = Regex.Match(name, @"^(\w{1,5})(\d{6})([CP])(\d{8})$");
+
+      if (data.Success is false)
+      {
+        return null;
+      }
+
+      var strike = double.Parse(data.Groups[4].Value) / 1000.0;
+      var expiration = DateTime.ParseExact(data.Groups[2].Value, "yyMMdd", null);
       var derivative = new DerivativeModel
       {
-        Strike = double.Parse(strike) / 1000.0,
-        ExpirationDate = expirationDate,
-        TradeDate = expirationDate
+        Strike = strike,
+        ExpirationDate = expiration,
+        TradeDate = expiration
       };
 
-      switch (side?.ToUpper())
+      switch (data.Groups[3].Value.ToUpper())
       {
         case "P": derivative.Side = OptionSideEnum.Put; break;
         case "C": derivative.Side = OptionSideEnum.Call; break;
@@ -470,29 +472,31 @@ namespace Schwab.Mappers
         if (GetInstrumentType(o.OrderLegType) is InstrumentEnum.Options or InstrumentEnum.FutureOptions)
         {
           var derivative = GetDerivative(o.Instrument.Symbol);
-          var strike = 1.0 / (derivative.Strike ?? 1.0);
-          var expiration = derivative.ExpirationDate?.Ticks ?? 1.0;
-          units = 100.0 * expiration * strike;
+          var strike = derivative.Strike ?? 1.0;
+          var expiration = (derivative.ExpirationDate?.Ticks ?? 1.0) / 1000000.0;
+          units = expiration * strike;
         }
 
         return volume * units;
       }
 
-      if (message?.OrderLegCollection?.Count > 0)
+      var side = GetSubOrderSide(message?.OrderType);
+
+      if (side is not null)
       {
-        var ups = message?.OrderLegCollection?.Where(o => GetSubOrderSide(o.Instruction) is OrderSideEnum.Long).Sum(getValue);
-        var downs = message?.OrderLegCollection?.Where(o => GetSubOrderSide(o.Instruction) is OrderSideEnum.Short).Sum(getValue);
-
-        switch (true)
-        {
-          case true when ups > downs: return OrderSideEnum.Long;
-          case true when ups < downs: return OrderSideEnum.Short;
-        }
-
-        return OrderSideEnum.Group;
+        return side;
       }
 
-      return GetSubOrderSide(message?.OrderType);
+      var ups = message?.OrderLegCollection?.Where(o => GetSubOrderSide(o.Instruction) is OrderSideEnum.Long).Sum(getValue);
+      var downs = message?.OrderLegCollection?.Where(o => GetSubOrderSide(o.Instruction) is OrderSideEnum.Short).Sum(getValue);
+
+      switch (true)
+      {
+        case true when ups > downs: return OrderSideEnum.Long;
+        case true when ups < downs: return OrderSideEnum.Short;
+      }
+
+      return OrderSideEnum.Group;
     }
 
     /// <summary>
@@ -528,17 +532,17 @@ namespace Schwab.Mappers
     /// <returns></returns>
     public static OrderTimeSpanEnum? GetTimeSpan(OrderMessage message)
     {
-      var span = message.Duration;
-      var session = message.Session;
+      var span = message?.Duration?.ToUpper();
+      var session = message?.Session?.ToUpper();
 
       switch (true)
       {
-        case true when Same(span, "DAY"): return OrderTimeSpanEnum.Day;
-        case true when Same(span, "FILL_OR_KILL"): return OrderTimeSpanEnum.Fok;
-        case true when Same(span, "GOOD_TILL_CANCEL"): return OrderTimeSpanEnum.Gtc;
-        case true when Same(span, "IMMEDIATE_OR_CANCEL"): return OrderTimeSpanEnum.Ioc;
-        case true when Same(session, "AM"): return OrderTimeSpanEnum.Am;
-        case true when Same(session, "PM"): return OrderTimeSpanEnum.Pm;
+        case true when Equals(span, "DAY"): return OrderTimeSpanEnum.Day;
+        case true when Equals(span, "FILL_OR_KILL"): return OrderTimeSpanEnum.Fok;
+        case true when Equals(span, "GOOD_TILL_CANCEL"): return OrderTimeSpanEnum.Gtc;
+        case true when Equals(span, "IMMEDIATE_OR_CANCEL"): return OrderTimeSpanEnum.Ioc;
+        case true when Equals(session, "AM"): return OrderTimeSpanEnum.Am;
+        case true when Equals(session, "PM"): return OrderTimeSpanEnum.Pm;
       }
 
       return null;
@@ -549,37 +553,6 @@ namespace Schwab.Mappers
     /// </summary>
     /// <param name="code"></param>
     /// <returns></returns>
-    public static T? GetEnum<T>(int code) where T : struct, Enum => Enum.IsDefined(typeof(T), code) ? (T)(object)code : null;
-
-    /// <summary>
-    /// Get field name by code
-    /// </summary>
-    /// <param name="code"></param>
-    /// <returns></returns>
     public static T? GetEnum<T>(string code) where T : struct, Enum => Enum.TryParse(code, true, out T o) ? o : null;
-
-    /// <summary>
-    /// Case insensitive comparison
-    /// </summary>
-    /// <param name="x"></param>
-    /// <param name="o"></param>
-    /// <returns></returns>
-    public static bool Same(string x, string o) => string.Equals(x, o, StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>
-    /// Get value or default
-    /// </summary>
-    /// <param name="v"></param>
-    /// <param name="origin"></param>
-    /// <returns></returns>
-    public static double? GetValue(double? v, double? origin) => v is 0 or null ? origin : v;
-
-    /// <summary>
-    /// Get value or default
-    /// </summary>
-    /// <param name="v"></param>
-    /// <param name="origin"></param>
-    /// <returns></returns>
-    public static double? GetValue(string v, double? origin) => double.TryParse(v, out var o) ? o : origin;
   }
 }

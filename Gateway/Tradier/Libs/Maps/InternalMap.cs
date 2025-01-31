@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
@@ -101,20 +103,19 @@ namespace Tradier.Mappers
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    public static OrderModel GetOrder(OrderMessage message)
+    public static OrderModel GetSubOrder(OrderMessage message)
     {
-      var subOrders = message?.Leg ?? [];
       var basis = new InstrumentModel
       {
-        Type = GetInstrumentType(message.Class),
-        Name = message.Symbol
+        Name = message.Symbol,
+        Type = GetInstrumentType(message.Class)
       };
 
       var instrument = new InstrumentModel
       {
         Basis = basis,
         Type = GetInstrumentType(message.Class),
-        Name = string.Join(" / ", subOrders.Select(o => o.OptionSymbol ?? o.Symbol).Distinct())
+        Name = message.OptionSymbol ?? message.Symbol
       };
 
       var action = new TransactionModel
@@ -134,40 +135,39 @@ namespace Tradier.Mappers
         Side = GetOrderSide(message)
       };
 
-      if (Equals(message?.Type?.ToUpper(), "MARKET") is false)
+      switch (message?.Type?.ToUpper())
       {
-        order.Type = OrderTypeEnum.Limit;
-        order.Price = message.Price;
-      }
-
-      if (subOrders.Length is not 0)
-      {
-        order.Instruction = InstructionEnum.Group;
-
-        foreach (var subOrder in subOrders)
-        {
-          var subInstrument = new InstrumentModel
-          {
-            Name = subOrder.Symbol,
-            Type = GetInstrumentType(subOrder.Class)
-          };
-
-          var subAction = new TransactionModel
-          {
-            Instrument = subInstrument,
-            Volume = subOrder.Quantity
-          };
-
-          order.Orders.Add(new OrderModel
-          {
-            Transaction = subAction,
-            Volume = subOrder.Quantity,
-            Side = GetSubOrderSide(subOrder.Side)
-          });
-        }
+        case "DEBIT":
+        case "CREDIT":
+        case "LIMIT": order.Type = OrderTypeEnum.Limit; order.Price = message.Price; break;
+        case "STOP": order.Type = OrderTypeEnum.Stop; order.Price = message.StopPrice; break;
+        case "STOP_LIMIT": order.Type = OrderTypeEnum.StopLimit; order.ActivationPrice = message.StopPrice; order.Price = message.Price; break;
       }
 
       return order;
+    }
+
+    /// <summary>
+    /// Get order
+    /// </summary>
+    /// <param name="message"></param>
+    /// <returns></returns>
+    public static IList<OrderModel> GetOrders(OrderMessage message)
+    {
+      var orders = (message.Orders ?? []).Select(GetSubOrder).ToList();
+
+      if (message.Quantity is null || message.Symbol is null)
+      {
+        return orders;
+      }
+
+      var order = GetSubOrder(message);
+      var name = string.Join(" / ", orders.Select(o => o.Name).Distinct());
+
+      order.Transaction.Instrument.Name = string.IsNullOrEmpty(name) ? order.Transaction.Instrument.Name : name;
+      order.Orders = orders;
+
+      return [order];
     }
 
     /// <summary>
@@ -180,7 +180,8 @@ namespace Tradier.Mappers
       var volume = Math.Abs(message.Quantity ?? 0);
       var instrument = new InstrumentModel
       {
-        Name = message.Symbol
+        Name = message.Symbol,
+        Derivative = GetDerivative(message.Symbol)
       };
 
       var action = new TransactionModel
@@ -248,6 +249,7 @@ namespace Tradier.Mappers
       var derivative = new DerivativeModel
       {
         Strike = message.Strike,
+        TradeDate = message.ExpirationDate,
         ExpirationDate = message.ExpirationDate,
         OpenInterest = message.OpenInterest ?? 0,
         Sigma = message?.Greeks?.SmvIV ?? 0,
@@ -270,7 +272,7 @@ namespace Tradier.Mappers
       optionInstrument.Point = optionPoint;
       optionInstrument.Derivative = derivative;
 
-      switch (message.Type.ToUpper())
+      switch (message.OptionType.ToUpper())
       {
         case "PUT": derivative.Side = OptionSideEnum.Put; break;
         case "CALL": derivative.Side = OptionSideEnum.Call; break;
@@ -338,18 +340,23 @@ namespace Tradier.Mappers
     /// <returns></returns>
     public static DerivativeModel GetDerivative(string name)
     {
-      var strike = name.Substring(name.Length - 8);
-      var side = name.Substring(name.Length - 9, 1);
-      var expiration = name.Substring(name.Length - 15, 6);
-      var expirationDate = DateTime.ParseExact(expiration, "yyMMdd", null);
+      var data = Regex.Match(name, @"^(\w{1,5})(\d{6})([CP])(\d{8})$");
+
+      if (data.Success is false)
+      {
+        return null;
+      }
+
+      var strike = double.Parse(data.Groups[4].Value) / 1000.0;
+      var expiration = DateTime.ParseExact(data.Groups[2].Value, "yyMMdd", null);
       var derivative = new DerivativeModel
       {
-        Strike = double.Parse(strike) / 1000.0,
-        ExpirationDate = expirationDate,
-        TradeDate = expirationDate
+        Strike = strike,
+        ExpirationDate = expiration,
+        TradeDate = expiration
       };
 
-      switch (side?.ToUpper())
+      switch (data.Groups[3].Value.ToUpper())
       {
         case "P": derivative.Side = OptionSideEnum.Put; break;
         case "C": derivative.Side = OptionSideEnum.Call; break;
@@ -365,37 +372,39 @@ namespace Tradier.Mappers
     /// <returns></returns>
     public static OrderSideEnum? GetOrderSide(OrderMessage message)
     {
-      static double? getValue(LegMessage o)
+      static double? getValue(OrderMessage o)
       {
-        var volume = o.ExecQuantity ?? o.Quantity;
         var units = 1.0;
+        var volume = Math.Max(o.ExecQuantity ?? 0, o.Quantity ?? 0);
 
         if (o.OptionSymbol is not null)
         {
           var derivative = GetDerivative(o.OptionSymbol);
-          var strike = 1.0 / (derivative.Strike ?? 1.0);
-          var expiration = derivative.ExpirationDate?.Ticks ?? 1.0;
-          units = 100.0 * expiration * strike;
+          var strike = derivative.Strike ?? 1.0;
+          var expiration = (derivative.ExpirationDate?.Ticks ?? 1.0) / 1000000.0;
+          units = expiration * strike;
         }
 
         return volume * units;
       }
 
-      if (message.NumLegs > 0)
+      var side = GetSubOrderSide(message?.Side);
+
+      if (side is not null)
       {
-        var ups = message?.Leg?.Where(o => GetSubOrderSide(o.Side) is OrderSideEnum.Long).Sum(getValue);
-        var downs = message?.Leg?.Where(o => GetSubOrderSide(o.Side) is OrderSideEnum.Short).Sum(getValue);
-
-        switch (true)
-        {
-          case true when ups > downs: return OrderSideEnum.Long;
-          case true when ups < downs: return OrderSideEnum.Short;
-        }
-
-        return OrderSideEnum.Group;
+        return side;
       }
 
-      return GetSubOrderSide(message?.Side);
+      var ups = message?.Orders?.Where(o => GetSubOrderSide(o.Side) is OrderSideEnum.Long).Sum(getValue);
+      var downs = message?.Orders?.Where(o => GetSubOrderSide(o.Side) is OrderSideEnum.Short).Sum(getValue);
+
+      switch (true)
+      {
+        case true when ups > downs: return OrderSideEnum.Long;
+        case true when ups < downs: return OrderSideEnum.Short;
+      }
+
+      return OrderSideEnum.Group;
     }
 
     /// <summary>

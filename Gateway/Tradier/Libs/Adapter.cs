@@ -101,7 +101,7 @@ namespace Tradier
 
       try
       {
-        var sender = new Service();
+        var sender = new Service() { Timeout = TimeSpan.FromDays(1) };
         var scheduler = new ScheduleService();
         var dataStreamer = new ClientWebSocket();
         var accountStreamer = new ClientWebSocket();
@@ -262,9 +262,10 @@ namespace Tradier
         var account = await GetBalances(num);
         var orders = await GetOrders(null, criteria);
         var positions = await GetPositions(null, criteria);
+        var openOrders = orders.Data.Where(o => o.Transaction.Status is OrderStatusEnum.Pending or OrderStatusEnum.Partitioned);
 
         Account.Balance = account.TotalEquity;
-        Account.Orders = orders.Data.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
+        Account.Orders = openOrders.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
         Account.Positions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
 
         positions
@@ -335,7 +336,7 @@ namespace Tradier
 
       try
       {
-        var optionResponse = await GetOptionChain(screener.Instrument.Name, screener.MaxDate ?? screener.MinDate);
+        var optionResponse = await GetOptionChain(screener.Instrument.Basis.Name, screener.MaxDate ?? screener.MinDate);
 
         response.Data = optionResponse
           .Options
@@ -387,8 +388,7 @@ namespace Tradier
 
       try
       {
-        response.Data = (await GetOrders(Account.Descriptor))?.Select(InternalMap.GetOrder)?.ToList() ?? [];
-
+       response.Data = (await GetOrders(Account.Descriptor))?.SelectMany(InternalMap.GetOrders)?.ToList() ?? [];
       }
       catch (Exception e)
       {
@@ -513,7 +513,7 @@ namespace Tradier
       else
       {
         var isBrace = order.Orders.Any(o => o.Instruction is InstructionEnum.Brace);
-        var isCombo = order.Orders.Append(order).Any(o => o.Transaction.Instrument.Type is InstrumentEnum.Shares);
+        var isCombo = order.Orders.Append(order).Any(o => o?.Transaction?.Instrument?.Type is InstrumentEnum.Shares);
 
         switch (true)
         {

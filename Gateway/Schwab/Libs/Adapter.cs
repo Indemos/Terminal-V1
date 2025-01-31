@@ -669,6 +669,8 @@ namespace Schwab
     /// <param name="streamPoints"></param>
     protected virtual void OnPoint(IDictionary<string, PointModel> pointMap, IEnumerable<StreamDataMessage> streamPoints)
     {
+      static double? parse(string o, double? origin) => double.TryParse(o, out var num) ? num : origin;
+
       foreach (var streamPoint in streamPoints)
       {
         var map = InternalMap.GetStreamMap(streamPoint.Service);
@@ -681,11 +683,11 @@ namespace Schwab
 
           point.Time = DateTime.Now;
           point.Instrument = instrument;
-          point.Bid = InternalMap.GetValue($"{data.Get(map.Get("Bid Price"))}", point.Bid);
-          point.Ask = InternalMap.GetValue($"{data.Get(map.Get("Ask Price"))}", point.Ask);
-          point.BidSize = InternalMap.GetValue($"{data.Get(map.Get("Bid Size"))}", point.BidSize);
-          point.AskSize = InternalMap.GetValue($"{data.Get(map.Get("Ask Size"))}", point.AskSize);
-          point.Last = InternalMap.GetValue($"{data.Get(map.Get("Last Price"))}", point.Last);
+          point.Bid = parse($"{data.Get(map.Get("Bid Price"))}", point.Bid);
+          point.Ask = parse($"{data.Get(map.Get("Ask Price"))}", point.Ask);
+          point.BidSize = parse($"{data.Get(map.Get("Bid Size"))}", point.BidSize);
+          point.AskSize = parse($"{data.Get(map.Get("Ask Size"))}", point.AskSize);
+          point.Last = parse($"{data.Get(map.Get("Last Price"))}", point.Last);
 
           point.Last = point.Last is 0 or null ? point.Bid ?? point.Ask : point.Last;
           point.Bid ??= point.Last;
@@ -806,7 +808,7 @@ namespace Schwab
 
       await Subscribe(order.Transaction.Instrument);
 
-      var exOrder = ExternalMap.GetOrder(order);
+      var exOrder = ExternalMap.GetOrder(Account, order);
       var response = new ResponseModel<OrderModel>();
       var exResponse = await Send<OrderMessage>($"{DataUri}/trader/v1/accounts/{_accountCode}/orders", HttpMethod.Post, exOrder);
 

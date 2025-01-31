@@ -2,6 +2,7 @@ using Schwab.Messages;
 using System.Linq;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 
 namespace Schwab.Mappers
@@ -11,9 +12,10 @@ namespace Schwab.Mappers
     /// <summary>
     /// Convert remote order from brokerage to local record
     /// </summary>
+    /// <param name="account"></param>
     /// <param name="order"></param>
     /// <returns></returns>
-    public static OrderMessage GetOrder(OrderModel order)
+    public static OrderMessage GetOrder(IAccount account, OrderModel order)
     {
       var action = order.Transaction;
       var message = new OrderMessage
@@ -37,7 +39,7 @@ namespace Schwab.Mappers
       message.OrderLegCollection = order
         .Orders
         .Where(o => o.Instruction is InstructionEnum.Side)
-        .Select(o => GetSubOrder(o, order))
+        .Select(o => GetSubOrder(account, o, order))
         .ToList();
 
       message.ChildOrderStrategies = order
@@ -46,15 +48,15 @@ namespace Schwab.Mappers
         .Where(o => Equals(o.Name, order.Name))
         .Select(o =>
         {
-          var subOrder = GetOrder(o);
-          subOrder.OrderLegCollection = [GetSubOrder(o, order)];
+          var subOrder = GetOrder(account, o);
+          subOrder.OrderLegCollection = [GetSubOrder(account, o, order)];
           return subOrder;
         })
         .ToList();
 
       if (order?.Volume is not 0)
       {
-        message.OrderLegCollection.Add(GetSubOrder(order));
+        message.OrderLegCollection.Add(GetSubOrder(account, order));
       }
 
       if (message.ChildOrderStrategies.Count is not 0)
@@ -122,7 +124,7 @@ namespace Schwab.Mappers
     /// <param name="order"></param>
     /// <param name="group"></param>
     /// <returns></returns>
-    public static OrderLegMessage GetSubOrder(OrderModel order, OrderModel group = null)
+    public static OrderLegMessage GetSubOrder(IAccount account, OrderModel order, OrderModel group = null)
     {
       var action = order?.Transaction ?? group?.Transaction;
       var assetType = action?.Instrument?.Type ?? group?.Transaction?.Instrument?.Type;
@@ -137,7 +139,7 @@ namespace Schwab.Mappers
       {
         Instrument = instrument,
         Quantity = order.Volume,
-        Instruction = GetSide(assetType, side)
+        Instruction = GetSide(account, order)
       };
 
       return response;
@@ -146,26 +148,35 @@ namespace Schwab.Mappers
     /// <summary>
     /// Get external instrument type
     /// </summary>
-    /// <param name="assetType"></param>
-    /// <param name="side"></param>
+    /// <param name="account"></param>
+    /// <param name="order"></param>
     /// <returns></returns>
-    public static string GetSide(InstrumentEnum? assetType, OrderSideEnum? side)
+    public static string GetSide(IAccount account, OrderModel order)
     {
-      if (assetType is InstrumentEnum.Options)
+      var position = account.Positions.Get(order.Name);
+      var option = order.Transaction.Instrument.Type is InstrumentEnum.Options or InstrumentEnum.FutureOptions;
+
+      if (option)
       {
-        switch (side)
+        switch (true)
         {
-          case OrderSideEnum.Long: return "BUY_TO_OPEN";
-          case OrderSideEnum.Short: return "SELL_TO_OPEN";
+          case true when position is null && order.Side is OrderSideEnum.Long:
+          case true when position is not null && position.Side is OrderSideEnum.Long && order.Side is OrderSideEnum.Long: return "BUY_TO_OPEN";
+          case true when position is not null && position.Side is OrderSideEnum.Short && order.Side is OrderSideEnum.Long: return "BUY_TO_CLOSE";
+          case true when position is null && order.Side is OrderSideEnum.Short:
+          case true when position is not null && position.Side is OrderSideEnum.Short && order.Side is OrderSideEnum.Short: return "SELL_TO_OPEN";
+          case true when position is not null && position.Side is OrderSideEnum.Long && order.Side is OrderSideEnum.Short: return "SELL_TO_CLOSE";
         }
       }
 
-      switch (side)
+      switch (true)
       {
-        case OrderSideEnum.Long: return "BUY";
-        case OrderSideEnum.Short: return "SELL";
-        case OrderSideEnum.ShortOpen: return "SELL_SHORT";
-        case OrderSideEnum.ShortCover: return "BUY_TO_COVER";
+        case true when position is null && order.Side is OrderSideEnum.Long:
+        case true when position is not null && position.Side is OrderSideEnum.Long && order.Side is OrderSideEnum.Long: return "BUY";
+        case true when position is not null && position.Side is OrderSideEnum.Short && order.Side is OrderSideEnum.Long: return "BUY_TO_COVER";
+        case true when position is null && order.Side is OrderSideEnum.Short:
+        case true when position is not null && position.Side is OrderSideEnum.Short && order.Side is OrderSideEnum.Short: return "SELL_SHORT";
+        case true when position is not null && position.Side is OrderSideEnum.Long && order.Side is OrderSideEnum.Short: return "SELL";
       }
 
       return null;

@@ -22,7 +22,7 @@ namespace Tradier
         { "class", "option" },
         { "symbol", order.BasisName ?? order.Name },
         { "option_symbol", GetOptionName(order) },
-        { "side", ExternalMap.GetSide(order) },
+        { "side", ExternalMap.GetSide(order, Account) },
         { "quantity", order.Volume },
         { "type", ExternalMap.GetOrderType(order.Type) },
         { "duration", ExternalMap.GetTimeSpan(order.TimeSpan) },
@@ -57,7 +57,7 @@ namespace Tradier
       foreach (var item in order.Orders)
       {
         data[$"option_symbol[{index}]"] = GetOptionName(item);
-        data[$"side[{index}]"] = ExternalMap.GetSide(item);
+        data[$"side[{index}]"] = ExternalMap.GetSide(item, Account);
         data[$"quantity[{index}]"] = item.Volume;
 
         index++;
@@ -79,7 +79,7 @@ namespace Tradier
         { "account_id", Account.Descriptor },
         { "class", "equity" },
         { "symbol", order.BasisName ?? order.Name },
-        { "side", ExternalMap.GetSide(order) },
+        { "side", ExternalMap.GetSide(order, Account) },
         { "quantity", order.Volume},
         { "type", ExternalMap.GetOrderType(order.Type) },
         { "duration", ExternalMap.GetTimeSpan(order.TimeSpan) },
@@ -114,7 +114,7 @@ namespace Tradier
       foreach (var item in order.Orders)
       {
         data[$"option_symbol[{index}]"] = GetOptionName(item);
-        data[$"side[{index}]"] = ExternalMap.GetSide(item);
+        data[$"side[{index}]"] = ExternalMap.GetSide(item, Account);
         data[$"quantity[{index}]"] = item.Volume;
 
         index++;
@@ -151,7 +151,7 @@ namespace Tradier
         data[$"quantity[{index}]"] = item.Volume;
         data[$"type[{index}]"] = ExternalMap.GetOrderType(item.Type);
         data[$"option_symbol[{index}]"] = GetOptionName(item);
-        data[$"side[{index}]"] = ExternalMap.GetSide(order);
+        data[$"side[{index}]"] = ExternalMap.GetSide(order, Account);
         data[$"price[{index}]"] = item.Price;
         data[$"stop[{index}]"] = item.ActivationPrice ?? item.Price;
 
@@ -189,7 +189,7 @@ namespace Tradier
         data[$"quantity[{index}]"] = item.Volume;
         data[$"type[{index}]"] = ExternalMap.GetOrderType(item.Type);
         data[$"option_symbol[{index}]"] = GetOptionName(item);
-        data[$"side[{index}]"] = ExternalMap.GetSide(order);
+        data[$"side[{index}]"] = ExternalMap.GetSide(order, Account);
         data[$"price[{index}]"] = item.Price;
         data[$"stop[{index}]"] = item.ActivationPrice ?? item.Price;
 
@@ -227,7 +227,7 @@ namespace Tradier
         data[$"quantity[{index}]"] = item.Volume;
         data[$"type[{index}]"] = ExternalMap.GetOrderType(item.Type);
         data[$"option_symbol[{index}]"] = GetOptionName(item);
-        data[$"side[{index}]"] = ExternalMap.GetSide(item);
+        data[$"side[{index}]"] = ExternalMap.GetSide(item, Account);
         data[$"price[{index}]"] = item.Price;
         data[$"stop[{index}]"] = item.ActivationPrice ?? item.Price;
 
