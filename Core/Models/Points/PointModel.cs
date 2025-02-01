@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Text.Json;
 using Terminal.Core.Collections;
 using Terminal.Core.Domains;
 using Terminal.Core.Extensions;

@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 using Terminal.Core.Enums;
 
 namespace Terminal.Core.Models

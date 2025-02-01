@@ -65,7 +65,24 @@ namespace Terminal.Pages.Gateways
         Descriptor = Configuration["Schwab:Account"],
         Instruments = new ConcurrentDictionary<string, InstrumentModel>
         {
-          [Instrument.Name] = Instrument
+          ["ES"] = new InstrumentModel
+          {
+            Name = "/ESH25",
+            Type = InstrumentEnum.Futures,
+            TimeFrame = TimeSpan.FromMinutes(1)
+          },
+          ["NQ"] = new InstrumentModel
+          {
+            Name = "/NQH25",
+            Type = InstrumentEnum.Futures,
+            TimeFrame = TimeSpan.FromMinutes(1)
+          },
+          ["YM"] = new InstrumentModel
+          {
+            Name = "/YMH25",
+            Type = InstrumentEnum.Futures,
+            TimeFrame = TimeSpan.FromMinutes(1)
+          }
         }
       };
 
@@ -85,6 +102,7 @@ namespace Terminal.Pages.Gateways
         .Values
         .ForEach(adapter => adapter.DataStream += async message =>
         {
+          Console.WriteLine(message.Next.Instrument.Name + " : " + message.Next.Instrument.Point.Last);
           if (Equals(message.Next.Instrument.Name, Instrument.Name))
           {
             await OnData(message.Next);
@@ -168,7 +186,7 @@ namespace Terminal.Pages.Gateways
         Orders = [SL, TP]
       };
 
-      await adapter.CreateOrders(order);
+      //await adapter.CreateOrders(order);
     }
 
     protected async Task ClosePositions(string name)

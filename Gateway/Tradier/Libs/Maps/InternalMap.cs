@@ -249,8 +249,8 @@ namespace Tradier.Mappers
       var derivative = new DerivativeModel
       {
         Strike = message.Strike,
-        TradeDate = message.ExpirationDate,
-        ExpirationDate = message.ExpirationDate,
+        TradeDate = message.ExpirationDate?.Date,
+        ExpirationDate = message.ExpirationDate?.Date,
         OpenInterest = message.OpenInterest ?? 0,
         Sigma = message?.Greeks?.SmvIV ?? 0,
       };
