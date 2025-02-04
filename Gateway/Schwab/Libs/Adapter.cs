@@ -457,7 +457,6 @@ namespace Schwab
 
         positions
           .Data
-          .Where(o => Account.Instruments.ContainsKey(o.Name) is false)
           .ForEach(o => Account.Instruments[o.Name] = o.Transaction.Instrument);
 
         response.Data = Account;

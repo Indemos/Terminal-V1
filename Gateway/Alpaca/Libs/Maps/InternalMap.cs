@@ -141,6 +141,11 @@ namespace Alpaca.Mappers
         Type = GetInstrumentType(message.AssetClass)
       };
 
+      if (instrument.Type is InstrumentEnum.Options)
+      {
+        instrument.Leverage = 100;
+      }
+
       var action = new TransactionModel
       {
         Price = price,

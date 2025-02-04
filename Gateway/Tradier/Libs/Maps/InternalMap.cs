@@ -184,18 +184,26 @@ namespace Tradier.Mappers
         Derivative = GetDerivative(message.Symbol)
       };
 
+      if (instrument.Derivative is not null)
+      {
+        instrument.Leverage = 100;
+        instrument.Type = InstrumentEnum.Options;
+      }
+
       var action = new TransactionModel
       {
         Instrument = instrument,
         Volume = volume
       };
 
+      var value = message.CostBasis;
+      var amount = volume * Math.Max(1, instrument.Leverage.Value);
       var order = new OrderModel
       {
         Volume = volume,
         Transaction = action,
         Type = OrderTypeEnum.Market,
-        Price = message.CostBasis / (volume * Math.Max(1, instrument.Leverage.Value)),
+        Price = Math.Abs((value / amount) ?? 0),
         Side = message.Quantity > 0 ? OrderSideEnum.Long : OrderSideEnum.Short
       };
 
