@@ -207,9 +207,24 @@ namespace Tradier
       {
         await Unsubscribe(instrument);
 
+        var orders = Account
+          .Orders
+          .Values
+          .SelectMany(o => o.Orders.Select(o => o.Name).Append(o.Name));
+
+        var positions = Account
+          .Positions
+          .Values
+          .Select(o => o.Name);
+
+        var names = orders
+          .Concat(positions)
+          .Append(instrument.Name)
+          .Distinct();
+
         var dataMessage = new DataMessage
         {
-          Symbols = [instrument.Name],
+          Symbols = [.. names],
           Filter = ["trade", "quote", "summary", "timesale", "tradex"],
           Session = _dataSession
         };
@@ -388,7 +403,7 @@ namespace Tradier
 
       try
       {
-       response.Data = (await GetOrders(Account.Descriptor))?.SelectMany(InternalMap.GetOrders)?.ToList() ?? [];
+        response.Data = (await GetOrders(Account.Descriptor))?.SelectMany(InternalMap.GetOrders)?.ToList() ?? [];
       }
       catch (Exception e)
       {

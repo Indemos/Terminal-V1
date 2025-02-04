@@ -26,7 +26,7 @@ namespace Tradier.Mappers
         Last = message.Bid,
         AskSize = message.AskSize,
         BidSize = message.BidSize,
-        Time = DateTimeOffset.FromUnixTimeMilliseconds(message?.BidDate ?? 0).UtcDateTime
+        Time = DateTimeOffset.FromUnixTimeMilliseconds(message?.BidDate ?? DateTime.UtcNow.Ticks).UtcDateTime.ToLocalTime()
       };
 
       return point;
@@ -47,7 +47,7 @@ namespace Tradier.Mappers
         AskSize = message.AskSize,
         BidSize = message.BidSize,
         Volume = message.Volume,
-        Time = DateTimeOffset.FromUnixTimeMilliseconds(message?.TradeDate ?? 0).UtcDateTime
+        Time = DateTimeOffset.FromUnixTimeMilliseconds(message?.TradeDate ?? DateTime.UtcNow.Ticks).UtcDateTime.ToLocalTime()
       };
 
       point.Bar ??= new BarModel();
@@ -249,8 +249,8 @@ namespace Tradier.Mappers
       var derivative = new DerivativeModel
       {
         Strike = message.Strike,
-        TradeDate = message.ExpirationDate?.Date,
-        ExpirationDate = message.ExpirationDate?.Date,
+        TradeDate = message.ExpirationDate,
+        ExpirationDate = message.ExpirationDate,
         OpenInterest = message.OpenInterest ?? 0,
         Sigma = message?.Greeks?.SmvIV ?? 0,
       };

@@ -148,7 +148,7 @@ namespace Derivative.Pages
 
       var optionSide = Enum.GetName(inputModel.Side.GetType(), inputModel.Side);
       var days = Math.Max((DateTime.Now - inputModel.Date).Value.TotalDays / 250.0, double.Epsilon);
-      var estimate = OptionService.Premium(optionSide, price, inputModel.Strike, days, 0.25, 0.05, 0);
+      var estimate = OptionService.Price(optionSide, price, inputModel.Strike, days, 0.25, 0.05, 0);
 
       return (estimate - inputModel.Premium) * inputModel.Amount * direction * 100;
     }

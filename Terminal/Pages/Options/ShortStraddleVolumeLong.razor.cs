@@ -1,3 +1,4 @@
+using Microsoft.Net.Http.Headers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -5,11 +6,13 @@ using System.Threading.Tasks;
 using Terminal.Components;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 using Terminal.Core.Models;
+using Terminal.Services;
 
 namespace Terminal.Pages.Options
 {
-  public partial class CoveredDirection
+  public partial class ShortStraddleVolumeLong
   {
     public virtual OptionPageComponent OptionView { get; set; }
 
@@ -44,18 +47,34 @@ namespace Terminal.Pages.Options
       var adapter = OptionView.View.Adapters["Sim"];
       var account = adapter.Account;
 
-      await OptionView.OnUpdate(point, 30, async options =>
+      await OptionView.OnUpdate(point, 1, async options =>
       {
-        if (account.Orders.Count is 0 && account.Positions.Count is 0)
+        var puts = options.Where(o => o.Derivative.Side is OptionSideEnum.Put).Sum(o => o.Point.Volume);
+        var calls = options.Where(o => o.Derivative.Side is OptionSideEnum.Call).Sum(o => o.Point.Volume);
+        var position = account.Positions.Values?.FirstOrDefault();
+        var isClear = account.Orders.Count is 0 && account.Positions.Count is 0;
+        var isTop = puts > calls && (position?.Transaction?.Instrument?.Derivative?.Side is OptionSideEnum.Call || isClear);
+        var isBottom = puts < calls && (position?.Transaction?.Instrument?.Derivative?.Side is OptionSideEnum.Put || isClear);
+
+        if (isTop || isBottom)
         {
-          var orders = GetOrders(adapter, point, OptionSideEnum.Call, options);
+          var orders = Array.Empty<OrderModel>();
+
+          await TradeService.ClosePositions(adapter);
+
+          switch (true)
+          {
+            case true when puts > calls: orders = [.. GetOrders(adapter, point, OptionSideEnum.Put, options)]; break;
+            case true when puts < calls: orders = [.. GetOrders(adapter, point, OptionSideEnum.Call, options)]; break;
+          }
+
           var orderResponse = await adapter.CreateOrders([.. orders]);
         }
       });
     }
 
     /// <summary>
-    /// Create PMCC strategy
+    /// Create debit spread strategy
     /// </summary>
     /// <param name="adapter"></param>
     /// <param name="point"></param>
@@ -66,10 +85,7 @@ namespace Terminal.Pages.Options
     {
       var account = adapter.Account;
       var sideOptions = options.Where(o => Equals(o.Derivative.Side, side));
-      var minDate = options.First().Derivative.ExpirationDate;
-      var maxDate = options.Last().Derivative.ExpirationDate;
-      var longOptions = sideOptions.Where(o => o.Derivative.ExpirationDate >= maxDate);
-      var shortOptions = sideOptions.Where(o => o.Derivative.ExpirationDate <= minDate);
+      var chainCenter = sideOptions.OrderBy(o => Math.Abs(Math.Abs(o.Derivative.Variance.Delta.Value) - 0.5));
       var order = new OrderModel
       {
         Type = OrderTypeEnum.Market,
@@ -77,47 +93,13 @@ namespace Terminal.Pages.Options
         [
           new OrderModel
           {
-            Volume = 2,
+            Volume = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Transaction = new ()
-          },
-          new OrderModel
-          {
-            Volume = 1,
-            Side = OrderSideEnum.Short,
-            Instruction = InstructionEnum.Side,
-            Transaction = new ()
+            Transaction = new TransactionModel { Instrument = chainCenter.First() }
           }
         ]
       };
-
-      switch (side)
-      {
-        case OptionSideEnum.Put:
-
-          var put = order.Orders[0].Transaction.Instrument = longOptions
-            .Where(o => o.Derivative.Strike > point.Last)
-            .FirstOrDefault();
-
-          order.Orders[1].Transaction.Instrument = shortOptions
-            .Where(o => o.Derivative.Strike < point.Last)
-            .LastOrDefault();
-
-          break;
-
-        case OptionSideEnum.Call:
-
-          var call = order.Orders[0].Transaction.Instrument = longOptions
-            .Where(o => o.Derivative.Strike < point.Last)
-            .LastOrDefault();
-
-          order.Orders[1].Transaction.Instrument = shortOptions
-            .Where(o => o.Derivative.Strike > point.Last)
-            .FirstOrDefault();
-
-          break;
-      }
 
       return [order];
     }

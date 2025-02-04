@@ -10,7 +10,7 @@ using Terminal.Services;
 
 namespace Terminal.Pages.Options
 {
-  public partial class StrikeFollower
+  public partial class GammaFollower
   {
     public virtual OptionPageComponent OptionView { get; set; }
 

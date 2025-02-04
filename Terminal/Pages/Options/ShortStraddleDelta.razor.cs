@@ -1,13 +1,16 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Components;
 using Terminal.Core.Domains;
+using Terminal.Core.Enums;
 using Terminal.Core.Models;
 using Terminal.Services;
 
 namespace Terminal.Pages.Options
 {
-  public partial class ShortStraddleDirection
+  public partial class ShortStraddleDelta
   {
     public virtual OptionPageComponent OptionView { get; set; }
 
@@ -52,14 +55,53 @@ namespace Terminal.Pages.Options
 
         if (account.Positions.Count > 0)
         {
-          var orders = TradeService.GetShareDirection(adapter, point);
+          var shareOrders = GetShareHedge(adapter, point);
 
-          if (orders.Count > 0)
+          if (shareOrders.Count > 0)
           {
-            var orderResponse = await adapter.CreateOrders([.. orders]);
+            var orderResponse = await adapter.CreateOrders([.. shareOrders]);
           }
         }
       });
+    }
+
+    /// <summary>
+    /// Hedge each delta change with shares
+    /// </summary>
+    /// <param name="adapter"></param>
+    /// <param name="point"></param>
+    /// <returns></returns>
+    public static IList<OrderModel> GetShareHedge(IGateway adapter, PointModel point)
+    {
+      var account = adapter.Account;
+      var basisDelta = Math.Round(account
+        .Positions
+        .Values
+        .Where(o => o.Transaction.Instrument.Derivative is null)
+        .Sum(TradeService.GetDelta), MidpointRounding.ToZero);
+
+      var optionDelta = Math.Round(account
+        .Positions
+        .Values
+        .Where(o => o.Transaction.Instrument.Derivative is not null)
+        .Sum(TradeService.GetDelta), MidpointRounding.ToZero);
+
+      var delta = optionDelta + basisDelta;
+
+      if (Math.Abs(delta) > 0)
+      {
+        var order = new OrderModel
+        {
+          Volume = Math.Abs(delta),
+          Type = OrderTypeEnum.Market,
+          Side = delta < 0 ? OrderSideEnum.Long : OrderSideEnum.Short,
+          Transaction = new() { Instrument = point.Instrument }
+        };
+
+        return [order];
+      }
+
+      return [];
     }
   }
 }

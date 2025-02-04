@@ -186,7 +186,7 @@ namespace Terminal.Pages.Gateways
         Orders = [SL, TP]
       };
 
-      //await adapter.CreateOrders(order);
+      await adapter.CreateOrders(order);
     }
 
     protected async Task ClosePositions(string name)

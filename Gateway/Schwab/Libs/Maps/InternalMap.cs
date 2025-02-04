@@ -114,7 +114,7 @@ namespace Schwab.Mappers
         AskSize = o.AskSize,
         BidSize = o.BidSize,
         Last = o.AskTime > o.BidTime ? o.AskPrice : o.BidPrice,
-        Time = DateTimeOffset.FromUnixTimeMilliseconds(o.QuoteTime ?? DateTime.Now.Ticks).UtcDateTime,
+        Time = DateTimeOffset.FromUnixTimeMilliseconds(o.QuoteTime ?? DateTime.Now.Ticks).UtcDateTime.ToLocalTime(),
         Instrument = instrument
       };
 
@@ -239,7 +239,7 @@ namespace Schwab.Mappers
         Bid = message.Close,
         AskSize = message.Volume,
         BidSize = message.Volume,
-        Time = DateTimeOffset.FromUnixTimeMilliseconds(message.Datetime ?? DateTime.Now.Ticks).UtcDateTime,
+        Time = DateTimeOffset.FromUnixTimeMilliseconds(message.Datetime ?? DateTime.Now.Ticks).UtcDateTime.ToLocalTime(),
         Last = message.Close
       };
 

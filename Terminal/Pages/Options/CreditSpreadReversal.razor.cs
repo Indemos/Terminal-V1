@@ -1,6 +1,4 @@
-using Canvas.Core.Models;
 using Canvas.Core.Shapes;
-using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -72,7 +70,7 @@ namespace Terminal.Pages.Options
         {
           if (rsi.Point.Last < 30 && posSide is not OptionSideEnum.Put)
           {
-            var orders = TradeService.GetCreditSpread(adapter, point, OptionSideEnum.Put, options);
+            var orders = GetOrders(adapter, point, OptionSideEnum.Put, options);
 
             if (orders.Count > 0)
             {
@@ -84,7 +82,7 @@ namespace Terminal.Pages.Options
 
           if (rsi.Point.Last > 70 && posSide is not OptionSideEnum.Call)
           {
-            var orders = TradeService.GetCreditSpread(adapter, point, OptionSideEnum.Call, options);
+            var orders = GetOrders(adapter, point, OptionSideEnum.Call, options);
 
             if (orders.Count > 0)
             {
@@ -97,6 +95,70 @@ namespace Terminal.Pages.Options
 
         OptionView.View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Indicators", "Rsi", new LineShape { Y = rsi.Point.Last });
       });
+    }
+
+    /// <summary>
+    /// Create credit spread strategy
+    /// </summary>
+    /// <param name="adapter"></param>
+    /// <param name="point"></param>
+    /// <param name="side"></param>
+    /// <param name="options"></param>
+    /// <returns></returns>
+    protected static IList<OrderModel> GetOrders(IGateway adapter, PointModel point, OptionSideEnum side, IList<InstrumentModel> options)
+    {
+      var account = adapter.Account;
+      var sideOptions = options.Where(o => Equals(o.Derivative.Side, side));
+      var order = new OrderModel
+      {
+        Type = OrderTypeEnum.Market,
+        Orders =
+        [
+          new OrderModel
+          {
+            Volume = 1,
+            Side = OrderSideEnum.Short,
+            Instruction = InstructionEnum.Side,
+            Transaction = new ()
+          },
+          new OrderModel
+          {
+            Volume = 1,
+            Side = OrderSideEnum.Long,
+            Instruction = InstructionEnum.Side,
+            Transaction = new ()
+          }
+        ]
+      };
+
+      switch (side)
+      {
+        case OptionSideEnum.Put:
+
+          var put = order.Orders[0].Transaction.Instrument = sideOptions
+            .Where(o => o.Derivative.Strike <= point.Last - point.Last * 0.001)
+            .LastOrDefault();
+
+          order.Orders[1].Transaction.Instrument = sideOptions
+            .Where(o => o.Derivative.Strike <= point.Last - point.Last * 0.005)
+            .LastOrDefault();
+
+          break;
+
+        case OptionSideEnum.Call:
+
+          var call = order.Orders[0].Transaction.Instrument = sideOptions
+            .Where(o => o.Derivative.Strike >= point.Last + point.Last * 0.001)
+            .FirstOrDefault();
+
+          order.Orders[1].Transaction.Instrument = sideOptions
+            .Where(o => o.Derivative.Strike >= point.Last + point.Last * 0.005)
+            .FirstOrDefault();
+
+          break;
+      }
+
+      return [order];
     }
   }
 }

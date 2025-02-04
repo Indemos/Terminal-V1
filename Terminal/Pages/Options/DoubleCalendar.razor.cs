@@ -6,10 +6,11 @@ using Terminal.Components;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
+using Terminal.Services;
 
 namespace Terminal.Pages.Options
 {
-  public partial class CoveredDirection
+  public partial class DoubleCalendar
   {
     public virtual OptionPageComponent OptionView { get; set; }
 
@@ -48,8 +49,9 @@ namespace Terminal.Pages.Options
       {
         if (account.Orders.Count is 0 && account.Positions.Count is 0)
         {
-          var orders = GetOrders(adapter, point, OptionSideEnum.Call, options);
-          var orderResponse = await adapter.CreateOrders([.. orders]);
+          var upside = await GetOrders(adapter, point, OptionSideEnum.Call);
+          var downside = await GetOrders(adapter, point, OptionSideEnum.Put);
+          var orderResponse = await adapter.CreateOrders([..upside, ..downside]);
         }
       });
     }
@@ -62,14 +64,13 @@ namespace Terminal.Pages.Options
     /// <param name="side"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    protected static IList<OrderModel> GetOrders(IGateway adapter, PointModel point, OptionSideEnum side, IList<InstrumentModel> options)
+    protected static async Task<IList<OrderModel>> GetOrders(IGateway adapter, PointModel point, OptionSideEnum side)
     {
       var account = adapter.Account;
-      var sideOptions = options.Where(o => Equals(o.Derivative.Side, side));
-      var minDate = options.First().Derivative.ExpirationDate;
-      var maxDate = options.Last().Derivative.ExpirationDate;
-      var longOptions = sideOptions.Where(o => o.Derivative.ExpirationDate >= maxDate);
-      var shortOptions = sideOptions.Where(o => o.Derivative.ExpirationDate <= minDate);
+      var curOptions = await TradeService.GetOptions(adapter, point, point.Time.Value.AddDays(0));
+      var nextOptions = await TradeService.GetOptions(adapter, point, point.Time.Value.AddDays(1));
+      var curSideOptions = curOptions.Where(o => Equals(o.Derivative.Side, side));
+      var nextSideOptions = nextOptions.Where(o => Equals(o.Derivative.Side, side));
       var order = new OrderModel
       {
         Type = OrderTypeEnum.Market,
@@ -77,7 +78,7 @@ namespace Terminal.Pages.Options
         [
           new OrderModel
           {
-            Volume = 2,
+            Volume = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
             Transaction = new ()
@@ -96,24 +97,24 @@ namespace Terminal.Pages.Options
       {
         case OptionSideEnum.Put:
 
-          var put = order.Orders[0].Transaction.Instrument = longOptions
+          var put = order.Orders[0].Transaction.Instrument = nextSideOptions
             .Where(o => o.Derivative.Strike > point.Last)
             .FirstOrDefault();
 
-          order.Orders[1].Transaction.Instrument = shortOptions
-            .Where(o => o.Derivative.Strike < point.Last)
+          order.Orders[1].Transaction.Instrument = curSideOptions
+            .Where(o => o.Derivative.Strike == put.Derivative.Strike)
             .LastOrDefault();
 
           break;
 
         case OptionSideEnum.Call:
 
-          var call = order.Orders[0].Transaction.Instrument = longOptions
+          var call = order.Orders[0].Transaction.Instrument = nextSideOptions
             .Where(o => o.Derivative.Strike < point.Last)
             .LastOrDefault();
 
-          order.Orders[1].Transaction.Instrument = shortOptions
-            .Where(o => o.Derivative.Strike > point.Last)
+          order.Orders[1].Transaction.Instrument = curSideOptions
+            .Where(o => o.Derivative.Strike == call.Derivative.Strike)
             .FirstOrDefault();
 
           break;

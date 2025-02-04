@@ -12,8 +12,8 @@
     <PackageReference Include="CalcEngine.Core" Version="1.0.0" />
     <PackageReference Include="MathNet.Numerics" Version="6.0.0-beta1" />
     <PackageReference Include="Meta.Numerics" Version="4.1.4" />
-    <PackageReference Include="MudBlazor" Version="8.1.0" />
-    <PackageReference Include="Estimator" Version="1.0.6" />
+    <PackageReference Include="MudBlazor" Version="8.2.0" />
+    <PackageReference Include="Estimator" Version="1.0.7" />
   </ItemGroup>
 
   <ItemGroup>

@@ -16,14 +16,14 @@ namespace Terminal.Services
     /// <summary>
     /// Get position delta
     /// </summary>
-    /// <param name="o"></param>
+    /// <param name="order"></param>
     /// <returns></returns>
-    public static double GetDelta(OrderModel o)
+    public static double GetDelta(OrderModel order)
     {
-      var volume = o.Volume;
-      var units = o.Transaction?.Instrument?.Leverage;
-      var delta = o.Transaction?.Instrument?.Derivative?.Variance?.Delta;
-      var side = o.Side is OrderSideEnum.Long ? 1.0 : -1.0;
+      var volume = order.Volume;
+      var units = order.Transaction?.Instrument?.Leverage;
+      var delta = order.Transaction?.Instrument?.Derivative?.Variance?.Delta;
+      var side = order.Side is OrderSideEnum.Long ? 1.0 : -1.0;
 
       return ((delta ?? volume) * units * side) ?? 0;
     }
@@ -38,16 +38,16 @@ namespace Terminal.Services
     {
       var direction = inputModel.Position is OrderSideEnum.Long ? 1.0 : -1.0;
 
-      if (inputModel.Side is not OptionSideEnum.Put && inputModel.Side is not OptionSideEnum.Call)
+      if (inputModel.Side is not (OptionSideEnum.Put or OptionSideEnum.Call))
       {
         return (price - inputModel.Price) * inputModel.Amount * direction;
       }
 
       var optionSide = Enum.GetName(inputModel.Side.GetType(), inputModel.Side);
       var days = Math.Max((inputModel.Date - date).Value.TotalDays / 250.0, double.Epsilon);
-      var estimate = OptionService.Premium(optionSide, price, inputModel.Strike, days, 0.25, 0.05, 0);
+      var estimate = OptionService.Price(optionSide, price, inputModel.Strike, days, 0.25, 0.05, 0);
 
-      return (estimate - inputModel.Premium) * inputModel.Amount * direction * 100;
+      return (estimate - inputModel.Premium) * inputModel.Amount * direction * 100.0;
     }
 
     /// <summary>
@@ -103,80 +103,6 @@ namespace Terminal.Services
     }
 
     /// <summary>
-    /// Create short condor strategy
-    /// </summary>
-    /// <param name="point"></param>
-    /// <param name="options"></param>
-    /// <returns></returns>
-    public static IList<OrderModel> GetCondor(IGateway adapter, PointModel point, IList<InstrumentModel> options)
-    {
-      var range = point.Last * 0.01;
-      var shortPut = options
-        ?.Where(o => o.Derivative.Side is OptionSideEnum.Put)
-        ?.Where(o => o.Derivative.Strike <= point.Last)
-        ?.LastOrDefault();
-
-      var longPut = options
-        ?.Where(o => o.Derivative.Side is OptionSideEnum.Put)
-        ?.Where(o => o.Derivative.Strike < shortPut.Derivative.Strike - range)
-        ?.LastOrDefault();
-
-      var shortCall = options
-        ?.Where(o => o.Derivative.Side is OptionSideEnum.Call)
-        ?.Where(o => o.Derivative.Strike >= point.Last)
-        ?.FirstOrDefault();
-
-      var longCall = options
-        ?.Where(o => o.Derivative.Side is OptionSideEnum.Call)
-        ?.Where(o => o.Derivative.Strike > shortCall.Derivative.Strike + range)
-        ?.FirstOrDefault();
-
-      if (shortPut is null || shortCall is null || longPut is null || longCall is null)
-      {
-        return [];
-      }
-
-      var order = new OrderModel
-      {
-        Type = OrderTypeEnum.Market,
-        Instruction = InstructionEnum.Group,
-        Orders =
-        [
-          new OrderModel
-          {
-            Volume = 1,
-            Side = OrderSideEnum.Long,
-            Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = longPut }
-          },
-          new OrderModel
-          {
-            Volume = 1,
-            Side = OrderSideEnum.Long,
-            Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = longCall }
-          },
-          new OrderModel
-          {
-            Volume = 1,
-            Side = OrderSideEnum.Short,
-            Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = shortPut }
-          },
-          new OrderModel
-          {
-            Volume = 1,
-            Side = OrderSideEnum.Short,
-            Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = shortCall }
-          }
-        ]
-      };
-
-      return [order];
-    }
-
-    /// <summary>
     /// Create short straddle strategy
     /// </summary>
     /// <param name="adapter"></param>
@@ -224,274 +150,6 @@ namespace Terminal.Services
           }
         ]
       };
-
-      return [order];
-    }
-
-    /// <summary>
-    /// Hedge each delta change with shares
-    /// </summary>
-    /// <param name="adapter"></param>
-    /// <param name="point"></param>
-    /// <returns></returns>
-    public static IList<OrderModel> GetShareHedge(IGateway adapter, PointModel point)
-    {
-      var account = adapter.Account;
-      var basisDelta = Math.Round(account
-        .Positions
-        .Values
-        .Where(o => o.Transaction.Instrument.Derivative is null)
-        .Sum(GetDelta), MidpointRounding.ToZero);
-
-      var optionDelta = Math.Round(account
-        .Positions
-        .Values
-        .Where(o => o.Transaction.Instrument.Derivative is not null)
-        .Sum(GetDelta), MidpointRounding.ToZero);
-
-      var delta = optionDelta + basisDelta;
-
-      if (Math.Abs(delta) > 0)
-      {
-        var order = new OrderModel
-        {
-          Volume = Math.Abs(delta),
-          Type = OrderTypeEnum.Market,
-          Side = delta < 0 ? OrderSideEnum.Long : OrderSideEnum.Short,
-          Transaction = new() { Instrument = point.Instrument }
-        };
-
-        return [order];
-      }
-
-      return [];
-    }
-
-    /// <summary>
-    /// Open share position in the direction of option delta
-    /// </summary>
-    /// <param name="point"></param>
-    /// <returns></returns>
-    public static IList<OrderModel> GetShareDirection(IGateway adapter, PointModel point)
-    {
-      var account = adapter.Account;
-      var basisDelta = account
-        .Positions
-        .Values
-        .Where(o => o.Transaction.Instrument.Derivative is null)
-        .Sum(GetDelta);
-
-      var optionDelta = account
-        .Positions
-        .Values
-        .Where(o => o.Transaction.Instrument.Derivative is not null)
-        .Sum(GetDelta);
-
-      var isOversold = basisDelta < 0 && optionDelta > 0;
-      var isOverbought = basisDelta > 0 && optionDelta < 0;
-
-      if (basisDelta is 0 || isOversold || isOverbought)
-      {
-        var order = new OrderModel
-        {
-          Volume = 100,
-          Type = OrderTypeEnum.Market,
-          Side = optionDelta > 0 ? OrderSideEnum.Long : OrderSideEnum.Short,
-          Transaction = new() { Instrument = point.Instrument }
-        };
-
-        return [order];
-      }
-
-      return [];
-    }
-
-    /// <summary>
-    /// Create credit spread strategy
-    /// </summary>
-    /// <param name="adapter"></param>
-    /// <param name="point"></param>
-    /// <param name="side"></param>
-    /// <param name="options"></param>
-    /// <returns></returns>
-    public static IList<OrderModel> GetCreditSpread(IGateway adapter, PointModel point, OptionSideEnum side, IList<InstrumentModel> options)
-    {
-      var account = adapter.Account;
-      var sideOptions = options.Where(o => Equals(o.Derivative.Side, side));
-      var order = new OrderModel
-      {
-        Type = OrderTypeEnum.Market,
-        Orders =
-        [
-          new OrderModel
-          {
-            Volume = 1,
-            Side = OrderSideEnum.Short,
-            Instruction = InstructionEnum.Side
-          },
-          new OrderModel
-          {
-            Volume = 1,
-            Side = OrderSideEnum.Long,
-            Instruction = InstructionEnum.Side
-          }
-        ]
-      };
-
-      switch (side)
-      {
-        case OptionSideEnum.Put:
-
-          var put = order.Orders[0].Transaction.Instrument = sideOptions
-            .Where(o => o.Derivative.Strike <= point.Last - point.Last * 0.001)
-            .LastOrDefault();
-
-          order.Orders[1].Transaction.Instrument = sideOptions
-            .Where(o => o.Derivative.Strike <= point.Last - point.Last * 0.005)
-            .LastOrDefault();
-
-          break;
-
-        case OptionSideEnum.Call:
-
-          var call = order.Orders[0].Transaction.Instrument = sideOptions
-            .Where(o => o.Derivative.Strike >= point.Last + point.Last * 0.001)
-            .FirstOrDefault();
-
-          order.Orders[1].Transaction.Instrument = sideOptions
-            .Where(o => o.Derivative.Strike >= point.Last + point.Last * 0.005)
-            .FirstOrDefault();
-
-          break;
-      }
-
-      return [order];
-    }
-
-    /// <summary>
-    /// Create debit spread strategy
-    /// </summary>
-    /// <param name="adapter"></param>
-    /// <param name="point"></param>
-    /// <param name="side"></param>
-    /// <param name="options"></param>
-    /// <returns></returns>
-    public static IList<OrderModel> GetDebigSpread(IGateway adapter, PointModel point, OptionSideEnum side, IList<InstrumentModel> options)
-    {
-      var account = adapter.Account;
-      var sideOptions = options.Where(o => Equals(o.Derivative.Side, side));
-      var order = new OrderModel
-      {
-        Type = OrderTypeEnum.Market,
-        Orders =
-        [
-          new OrderModel
-          {
-            Volume = 1,
-            Side = OrderSideEnum.Long,
-            Instruction = InstructionEnum.Side
-          },
-          new OrderModel
-          {
-            Volume = 1,
-            Side = OrderSideEnum.Short,
-            Instruction = InstructionEnum.Side
-          }
-        ]
-      };
-
-      switch (side)
-      {
-        case OptionSideEnum.Put:
-
-          var put = order.Orders[0].Transaction.Instrument = sideOptions
-            .Where(o => o.Derivative.Strike >= point.Last + point.Last * 0.001)
-            .FirstOrDefault();
-
-          order.Orders[1].Transaction.Instrument = sideOptions
-            .Where(o => o.Derivative.Strike <= point.Last - point.Last * 0.005)
-            .LastOrDefault();
-
-          break;
-
-        case OptionSideEnum.Call:
-
-          var call = order.Orders[0].Transaction.Instrument = sideOptions
-            .Where(o => o.Derivative.Strike <= point.Last - point.Last * 0.001)
-            .LastOrDefault();
-
-          order.Orders[1].Transaction.Instrument = sideOptions
-            .Where(o => o.Derivative.Strike >= point.Last + point.Last * 0.005)
-            .FirstOrDefault();
-
-          break;
-      }
-
-      return [order];
-    }
-
-    /// <summary>
-    /// Create PMCC strategy
-    /// </summary>
-    /// <param name="adapter"></param>
-    /// <param name="point"></param>
-    /// <param name="side"></param>
-    /// <param name="options"></param>
-    /// <returns></returns>
-    public static IList<OrderModel> GetPmCover(IGateway adapter, PointModel point, OptionSideEnum side, IList<InstrumentModel> options)
-    {
-      var account = adapter.Account;
-      var sideOptions = options.Where(o => Equals(o.Derivative.Side, side));
-      var minDate = options.First().Derivative.ExpirationDate;
-      var maxDate = options.Last().Derivative.ExpirationDate;
-      var longOptions = sideOptions.Where(o => o.Derivative.ExpirationDate >= maxDate);
-      var shortOptions = sideOptions.Where(o => o.Derivative.ExpirationDate <= minDate);
-      var order = new OrderModel
-      {
-        Type = OrderTypeEnum.Market,
-        Orders =
-        [
-          new OrderModel
-          {
-            Volume = 2,
-            Side = OrderSideEnum.Long,
-            Instruction = InstructionEnum.Side
-          },
-          new OrderModel
-          {
-            Volume = 1,
-            Side = OrderSideEnum.Short,
-            Instruction = InstructionEnum.Side
-          }
-        ]
-      };
-
-      switch (side)
-      {
-        case OptionSideEnum.Put:
-
-          var put = order.Orders[0].Transaction.Instrument = longOptions
-            .Where(o => o.Derivative.Strike > point.Last)
-            .FirstOrDefault();
-
-          order.Orders[1].Transaction.Instrument = shortOptions
-            .Where(o => o.Derivative.Strike < point.Last)
-            .LastOrDefault();
-
-          break;
-
-        case OptionSideEnum.Call:
-
-          var call = order.Orders[0].Transaction.Instrument = longOptions
-            .Where(o => o.Derivative.Strike < point.Last)
-            .LastOrDefault();
-
-          order.Orders[1].Transaction.Instrument = shortOptions
-            .Where(o => o.Derivative.Strike > point.Last)
-            .FirstOrDefault();
-
-          break;
-      }
 
       return [order];
     }

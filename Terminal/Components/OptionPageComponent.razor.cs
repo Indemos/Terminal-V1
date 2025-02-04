@@ -1,8 +1,10 @@
 using Canvas.Core.Models;
 using Canvas.Core.Shapes;
+using Estimator.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using MudBlazor;
+using MudBlazor.Extensions;
 using SkiaSharp;
 using System;
 using System.Collections.Concurrent;
@@ -45,7 +47,7 @@ namespace Terminal.Components
 
       View.OnPreConnect = () =>
       {
-        View.Adapters["Sim"] = CreateSimAccount();
+        View.Adapters["Sim"] = CreateAccount();
         View.Adapters["Sim"].DataStream += o => action(o.Next);
       };
 
@@ -74,7 +76,7 @@ namespace Terminal.Components
     public virtual async Task CreateViews(params string[] groups)
     {
       await View.ReportsView.Create("Performance");
-      await View.ChartsView.Create([.. groups, "Volume", "Delta", "Vega", "Theta", "Ratios"]);
+      await View.ChartsView.Create([.. groups, "Prices", "Volume", "Delta", "Vega", "Theta", "Ratios"]);
       await PositionsView.Create("Assets", "Volume", "Delta", "Gamma", "Vega", "Iv", "Theta");
       await StrikesView.Create("Gamma", "Theta", "Volume", "OI", "Ratios");
       await PremiumsView.Create("Estimates");
@@ -85,7 +87,7 @@ namespace Terminal.Components
     /// Setup simulation account
     /// </summary>
     /// <returns></returns>
-    public virtual Sim.Adapter CreateSimAccount()
+    public virtual Sim.Adapter CreateAccount()
     {
       var account = new Account
       {
@@ -135,6 +137,22 @@ namespace Terminal.Components
       View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Vega", "CallPutVega", new AreaShape { Y = calls.Sum(o => o.Derivative.Variance.Vega) - puts.Sum(o => o.Derivative.Variance.Vega), Component = com });
       View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Theta", "CallPutTheta", new AreaShape { Y = calls.Sum(o => o.Derivative.Variance.Theta) - puts.Sum(o => o.Derivative.Variance.Theta), Component = com });
       View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Ratios", "CallPutDomRatio", new AreaShape { Y = (callBids - callAsks) - (putBids - putAsks), Component = com });
+
+      var callsMargin = calls.Sum(o =>
+      {
+        var exp = (o.Derivative.ExpirationDate - point.Time)?.TotalDays / 365.0;
+        var price = OptionService.Price("Call", point.Last.Value, o.Derivative.Strike.Value, exp.Value, o.Derivative.Sigma.Value / 100.0, 0, 0);
+        return o.Point.Ask - price;
+      });
+
+      var putsMargin = puts.Sum(o =>
+      {
+        var exp = (o.Derivative.ExpirationDate - point.Time)?.TotalDays / 365.0;
+        var price = OptionService.Price("Put", point.Last.Value, o.Derivative.Strike.Value, exp.Value, o.Derivative.Sigma.Value / 100.0, 0, 0);
+        return o.Point.Ask - price;
+      });
+
+      View.ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "MispricedCallPut", new AreaShape { Y = callsMargin - putsMargin, Component = com });
 
       var performance = Performance.Calculate([account]);
 

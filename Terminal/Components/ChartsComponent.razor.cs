@@ -26,11 +26,6 @@ namespace Terminal.Components
     protected virtual ComponentModel DownSide { get; set; }
 
     /// <summary>
-    /// Points
-    /// </summary>
-    protected virtual IList<IShape> Shapes { get; set; } = [];
-
-    /// <summary>
     /// Indices
     /// </summary>
     protected virtual IDictionary<long, IShape> Indices { get; set; } = new Dictionary<long, IShape>();
@@ -39,6 +34,11 @@ namespace Terminal.Components
     /// Reference to view control
     /// </summary>
     public virtual CanvasGroupView View { get; set; }
+
+    /// <summary>
+    /// Points
+    /// </summary>
+    public virtual IList<IShape> Shapes { get; protected set; } = [];
 
     /// <summary>
     /// Labels
